@@ -11,8 +11,8 @@ const Observations = ({ observations }) => {
         {observations.map((obs) => (
           <div
             key={obs.id}
-            className={`px-2 py-1.5 rounded-md cursor-pointer text-sm transition-colors flex items-center ${
-              selectedDocId === obs.id ? "bg-document font-medium" : ""
+            className={`px-2 py-1.5 rounded-md cursor-pointer text-sm transition-colors hover:bg-muted flex items-center ${
+              selectedDocId === obs.id ? "bg-muted font-medium" : ""
             }`}
             onClick={() => handleDocumentClick(obs.id)}
           >

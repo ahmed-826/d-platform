@@ -9,7 +9,7 @@ const PDFViewer = ({ path, name }) => {
           title={name || "PDF Viewer"}
         />
       ) : (
-        <div className="flex items-center justify-center h-full text-gray-600">
+        <div className="flex items-center justify-center h-full text-muted-foreground">
           Aucun document disponible
         </div>
       )}

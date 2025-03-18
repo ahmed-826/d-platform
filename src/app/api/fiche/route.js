@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { data } from "@/utils/data";
+import { Data } from "@/utils/data";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  console.log("request ...");
+
+  const data = id === "1" ? Data : null;
 
   if (!data) {
     return NextResponse.json({

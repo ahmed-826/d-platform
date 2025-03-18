@@ -107,11 +107,11 @@ const Comments = ({ commentsData }) => {
         <Card className="h-full border-t">
           <CardHeader className="flex flex-row items-center justify-between py-2 px-4 space-y-0 bg-accent border-b">
             <div className="flex items-center">
-              <MessageSquare size={16} className="mr-2 text-blue-500" />
+              <MessageSquare size={16} className="mr-2 text-primary" />
               <CardTitle className="text-sm font-medium">
                 Commentaires
               </CardTitle>
-              <span className="ml-2 text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full">
+              <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                 {comments.length}
               </span>
             </div>
@@ -169,7 +169,7 @@ const Comments = ({ commentsData }) => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-5 w-5 p-0 text-gray-600"
+                            className="h-5 w-5 p-0"
                             onClick={() => startEditing(comment)}
                           >
                             <Edit size={12} />
@@ -177,7 +177,7 @@ const Comments = ({ commentsData }) => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-5 w-5 p-0 text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                            className="h-5 w-5 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => handleDeleteComment(comment.id)}
                           >
                             <Trash size={12} />
@@ -197,7 +197,7 @@ const Comments = ({ commentsData }) => {
                             <Button
                               variant="outline"
                               size="xs"
-                              className="h-6 text-xs px-4 py-4 text-gray-900"
+                              className="h-6 text-xs px-4 py-4"
                               onClick={cancelEditing}
                             >
                               <X size={10} className="mr-1" /> Annuler

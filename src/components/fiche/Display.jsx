@@ -9,7 +9,7 @@ const Display = ({ ficheInfo, allDocuments, commentsData }) => {
 
   return !entireMode ? (
     <div className="flex-1 flex overflow-hidden">
-      <div className="w-3/5 flex flex-col p-4 overflow-hidden bg-gray-100/20">
+      <div className="w-3/5 flex flex-col p-4 overflow-hidden bg-muted/20">
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 min-h-0">
             <DocumentViewer document={ficheInfo} />
@@ -33,7 +33,7 @@ const Display = ({ ficheInfo, allDocuments, commentsData }) => {
     </div>
   ) : (
     <div className="w-full h-full flex-1 overflow-hidden">
-      <div className="w-full h-full p-4 overflow-hidden bg-gray-100/20">
+      <div className="w-full h-full p-4 overflow-hidden bg-muted/20">
         <div className="w-full h-full flex-1 overflow-hidden">
           <div className="h-full">
             <DocumentViewer

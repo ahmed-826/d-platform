@@ -1,11 +1,15 @@
+import { notFound } from "next/navigation";
+
 import Layout from "./layout";
 import { Loading, Sidebar, Display } from "@/components/fiche";
 import { FicheProvider } from "@/contexts/FicheContext";
 
-const page = async () => {
-  const ficheId = 1;
+const NEXT_IP = process.env.NEXT_IP;
+const NEXT_PORT = process.env.NEXT_PORT;
+
+const page = async ({ params }) => {
   const { data, error } = await fetch(
-    `http://localhost:3001/api/fiche?id=${ficheId}`,
+    `http://${NEXT_IP}:${NEXT_PORT}/api/fiche?id=${params.ficheId}`,
     {
       method: "GET",
       headers: {
@@ -15,7 +19,11 @@ const page = async () => {
   ).then((res) => res.json());
 
   if (error) {
-    return <div>Error: {error}</div>;
+    if (error.status === 404) {
+      notFound();
+    } else {
+      return <div>Error: {error.message}</div>;
+    }
   }
 
   const ficheInfo = {

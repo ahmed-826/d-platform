@@ -16,8 +16,8 @@ const SourceDocuments = ({ sourceDocuments }) => {
         {sourceDocuments.map((doc) => (
           <div
             key={doc.id}
-            className={`px-2 py-2 rounded-md cursor-pointer text-sm transition-colors flex items-center ${
-              selectedDocId === doc.id ? "bg-document font-medium" : ""
+            className={`px-2 py-2 rounded-md cursor-pointer text-sm transition-colors hover:bg-muted flex items-center ${
+              selectedDocId === doc.id ? "bg-muted font-medium" : ""
             }`}
             onClick={() => handleDocumentClick(doc.id)}
           >

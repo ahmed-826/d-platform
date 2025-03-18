@@ -1,4 +1,4 @@
-export const data = {
+export const Data = {
   id: "Fiche-Avbd789w5d2slNyhs9v",
   ref: "FICHE-2023-001",
   object:

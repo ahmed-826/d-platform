@@ -13,7 +13,7 @@ const Sidebar = ({
   namedEntities,
 }) => {
   return (
-    <div className="h-full flex flex-col border-r bg-white overflow-auto">
+    <div className="h-full flex flex-col border-r bg-card overflow-auto">
       <div className="p-4">
         <h2 className="text-lg font-medium">Explorateur de Documents</h2>
       </div>

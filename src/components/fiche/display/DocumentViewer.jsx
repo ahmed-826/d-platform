@@ -17,26 +17,35 @@ import { useFiche } from "@/contexts/FicheContext";
 const DocumentViewer = ({ document }) => {
   const { entireMode, toggleEntireMode, navigatePrevious, navigateNext } =
     useFiche();
-  const FileIcon = document.docType === "observation" ? Lightbulb : FileText;
 
-  const displayedTypeMapping = {
-    fiche: "Fiche",
-    source: "Document source",
-    observation: "Observation",
-  };
-  const displayedType = displayedTypeMapping[document.docType];
   const extension = document.path.split(".").pop();
+
+  const displayConfig = {
+    fiche: {
+      icon: FileText,
+      type: "Fiche",
+    },
+    source: {
+      icon: FileText,
+      type: "Document source",
+    },
+    observation: {
+      icon: Lightbulb,
+      type: "Observation",
+    },
+  };
+  const type = displayConfig[document.docType].type;
+  const Icon = displayConfig[document.docType].icon;
 
   return (
     <div className="h-full w-full">
       <Card className="h-full shadow-sm">
         <CardHeader className="py-2 px-4 bg-accent rounded-t-lg border-b flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-sm font-medium flex items-center">
-            <FileIcon size={16} className="mr-2 text-gray-600" />
-            <span className="font-semibold">{displayedType}</span>:{" "}
-            {document.name}
+            <Icon size={16} className="mr-2 text-muted-foreground" />
+            <span className="font-semibold">{type}</span>: {document.name}
           </CardTitle>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1">
             {entireMode && (
               <>
                 <Button

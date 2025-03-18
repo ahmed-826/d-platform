@@ -19,7 +19,7 @@ const SidebarSection = ({
   return (
     <div className="mb-4">
       <div
-        className="flex items-center py-2 px-3 hover:bg-gray-100/50 cursor-pointer rounded-md transition-colors"
+        className="flex items-center py-2 px-3 hover:bg-muted/50 cursor-pointer rounded-md transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         {Icon && <Icon size={16} className="mr-2 text-blue-500" />}
