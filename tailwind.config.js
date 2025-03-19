@@ -64,6 +64,36 @@ module.exports = {
         "slide-out-right": "slide-out-right 0.3s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
       },
+      keyframes: {
+        "accordion-down": {
+          "0%": { height: "0" },
+          "100%": { height: "100%" },
+        },
+        "accordion-up": {
+          "0%": { height: "100%" },
+          "100%": { height: "0" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        "fade-out": {
+          "0%": { opacity: "1" },
+          "100%": { opacity: "0" },
+        },
+        "slide-in-right": {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "slide-out-right": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(100%)" },
+        },
+        "scale-in": {
+          "0%": { transform: "scale(0)" },
+          "100%": { transform: "scale(1)" },
+        },
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],
