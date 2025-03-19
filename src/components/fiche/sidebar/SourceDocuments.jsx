@@ -3,7 +3,7 @@ import { FileText } from "lucide-react";
 import { useFiche } from "@/contexts/FicheContext";
 
 const SourceDocuments = ({ sourceDocuments }) => {
-  const { selectedDocId, handleDocumentClick } = useFiche();
+  const { selectedDoc, handleDocumentClick } = useFiche();
 
   if (!sourceDocuments.length) return;
   return (
@@ -13,9 +13,9 @@ const SourceDocuments = ({ sourceDocuments }) => {
           <div
             key={doc.id}
             className={`px-2 py-2 rounded-md cursor-pointer text-sm transition-colors hover:bg-muted flex items-center ${
-              selectedDocId === doc.id ? "bg-muted font-medium" : ""
+              selectedDoc?.id === doc.id ? "bg-muted font-medium" : ""
             }`}
-            onClick={() => handleDocumentClick(doc?.id || null)}
+            onClick={() => handleDocumentClick(doc)}
           >
             <FileText size={14} className="mr-2 text-gray-600" />
             <span>{doc.name}</span>

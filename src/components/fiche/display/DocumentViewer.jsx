@@ -1,8 +1,7 @@
 "use client";
-
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-
 import PDFViewer from "./PDFViewer";
 import {
   FileText,
@@ -11,13 +10,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Lightbulb,
+  View,
 } from "lucide-react";
 import { useFiche } from "@/contexts/FicheContext";
 
-const DocumentViewer = ({ document }) => {
+const DocumentViewer = ({ document, withNavigate = false }) => {
   const { entireMode, toggleEntireMode, navigatePrevious, navigateNext } =
     useFiche();
 
+  const withPreview = document.docType === "observation";
   const extension = document.path.split(".").pop();
 
   const displayConfig = {
@@ -46,13 +47,13 @@ const DocumentViewer = ({ document }) => {
             <span className="font-semibold">{type}</span>: {document.name}
           </CardTitle>
           <div className="flex items-center space-x-1">
-            {entireMode && (
+            {withNavigate && (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={navigatePrevious}
-                  className="h-7 w-7 p-0"
+                  onClick={() => navigatePrevious(document)}
+                  className="h-7 w-7 p-0 hover:bg-gray-200"
                   title="Document précédent"
                 >
                   <ChevronLeft size={16} />
@@ -60,19 +61,32 @@ const DocumentViewer = ({ document }) => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={navigateNext}
-                  className="h-7 w-7 p-0"
+                  onClick={() => navigateNext(document)}
+                  className="h-7 w-7 p-0 hover:bg-gray-200"
                   title="Document suivant"
                 >
                   <ChevronRight size={16} />
                 </Button>
               </>
             )}
+            {withPreview && (
+              <Link href={`/fiche/${document.name}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateNext(document)}
+                  className="h-7 w-7 p-0 hover:bg-gray-200"
+                  title="Aperçu"
+                >
+                  <View size={16} />
+                </Button>{" "}
+              </Link>
+            )}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => toggleEntireMode(document.id)}
-              className="h-7 w-7 p-0"
+              onClick={() => toggleEntireMode(document)}
+              className="h-7 w-7 p-0 hover:bg-gray-200"
               title={
                 entireMode ? "Quitter le mode plein écran" : "Mode plein écran"
               }

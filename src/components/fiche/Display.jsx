@@ -3,9 +3,8 @@ import { useFiche } from "@/contexts/FicheContext";
 import DocumentViewer from "@/components/fiche/display/DocumentViewer";
 import Comments from "@/components/fiche/display/Comments";
 
-const Display = ({ ficheInfo, allDocuments, commentsData }) => {
-  const { entireMode, EntireModeselectedDocIndex, selectedDocId } = useFiche();
-  const selectedDocument = allDocuments.find((doc) => doc.id === selectedDocId);
+const Display = ({ ficheInfo, commentsData }) => {
+  const { selectedDoc, entireMode } = useFiche();
 
   return !entireMode ? (
     <div className="flex-1 flex overflow-hidden">
@@ -22,10 +21,8 @@ const Display = ({ ficheInfo, allDocuments, commentsData }) => {
       <div className="w-2/5 flex flex-col p-4 overflow-hidden bg-gray-50 border-l h-full">
         <div className="flex-1 overflow-hidden">
           <div className="h-full">
-            {selectedDocument && (
-              <DocumentViewer
-                document={allDocuments.find((doc) => doc.id === selectedDocId)}
-              />
+            {selectedDoc && (
+              <DocumentViewer document={selectedDoc} withNavigate />
             )}
           </div>
         </div>
@@ -36,9 +33,7 @@ const Display = ({ ficheInfo, allDocuments, commentsData }) => {
       <div className="w-full h-full p-4 overflow-hidden bg-muted/20">
         <div className="w-full h-full flex-1 overflow-hidden">
           <div className="h-full">
-            <DocumentViewer
-              document={allDocuments[EntireModeselectedDocIndex]}
-            />
+            <DocumentViewer document={selectedDoc} withNavigate />
           </div>
         </div>
       </div>

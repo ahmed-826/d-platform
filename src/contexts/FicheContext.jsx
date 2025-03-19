@@ -3,51 +3,63 @@ import { createContext, useContext, useState } from "react";
 
 const FicheContext = createContext(null);
 
-export const FicheProvider = ({ children, allDocuments }) => {
-  const [selectedDocId, setSelectedDocId] = useState(null);
-  const [EntireModeselectedDocIndex, setEntireModeselectedDocIndex] =
-    useState(null);
+export const FicheProvider = ({
+  children,
+  fiche,
+  sourceDocuments,
+  observations,
+}) => {
+  const [selectedDoc, setSelectedDoc] = useState(null);
   const [entireMode, setEntireMode] = useState(false);
 
-  const handleDocumentClick = (id) => {
-    setSelectedDocId(id);
-
-    if (entireMode) {
-      const index = allDocuments.findIndex((doc) => doc.id === id);
-      setEntireModeselectedDocIndex(index !== -1 ? index : null);
-    }
+  const handleDocumentClick = (document) => {
+    if (document?.id && document?.id !== selectedDoc?.id)
+      setSelectedDoc(document);
   };
 
-  const toggleEntireMode = (id) => {
+  const toggleEntireMode = (document) => {
     if (!entireMode) {
-      const index = allDocuments.findIndex((doc) => doc.id === id);
-      setEntireModeselectedDocIndex(index !== -1 ? index : null);
+      setSelectedDoc(document);
     }
     setEntireMode((prev) => !prev);
   };
 
-  const navigatePrevious = () => {
-    if (EntireModeselectedDocIndex !== null && EntireModeselectedDocIndex > 0) {
-      setEntireModeselectedDocIndex((prev) => prev - 1);
+  const navigatePrevious = (document) => {
+    const docType = document?.docType;
+    if (docType === "source") {
+      const index = sourceDocuments.findIndex((doc) => doc.id === document.id);
+      if (index > 0) {
+        setSelectedDoc(sourceDocuments[index - 1]);
+      } else if (index === 0 && entireMode) setSelectedDoc(fiche);
+    } else if (docType === "observation") {
+      const index = observations.findIndex((obs) => obs.id === document.id);
+      if (index > 0) {
+        setSelectedDoc(observations[index - 1]);
+      }
     }
   };
 
-  const navigateNext = () => {
-    if (
-      EntireModeselectedDocIndex !== null &&
-      EntireModeselectedDocIndex < allDocuments.length - 1
-    ) {
-      setEntireModeselectedDocIndex((prev) => prev + 1);
+  const navigateNext = (document) => {
+    const docType = document?.docType;
+    if (docType === "fiche" && entireMode) setSelectedDoc(sourceDocuments[0]);
+    else if (docType === "source") {
+      const index = sourceDocuments.findIndex((doc) => doc.id === document.id);
+      if (index < sourceDocuments.length - 1) {
+        setSelectedDoc(sourceDocuments[index + 1]);
+      }
+    } else if (docType === "observation") {
+      const index = observations.findIndex((obs) => obs.id === document.id);
+      if (index < observations.length - 1) {
+        setSelectedDoc(observations[index + 1]);
+      }
     }
   };
 
   return (
     <FicheContext.Provider
       value={{
-        selectedDocId,
+        selectedDoc,
         handleDocumentClick,
-        EntireModeselectedDocIndex,
-        setEntireModeselectedDocIndex,
         entireMode,
         toggleEntireMode,
         navigatePrevious,

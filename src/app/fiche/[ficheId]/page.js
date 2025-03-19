@@ -26,7 +26,7 @@ const page = async ({ params }) => {
     }
   }
 
-  const ficheInfo = {
+  const fiche = {
     id: data?.id,
     name: data?.ref,
     source: data?.source,
@@ -35,43 +35,41 @@ const page = async ({ params }) => {
     status: data?.status,
     docType: "fiche",
   };
-  const sourceDocuments = data.sourceDocuments || [];
+  const sourceDocuments = (data.sourceDocuments || []).map((doc) => ({
+    id: doc?.id,
+    name: doc?.name,
+    path: doc?.path,
+    docType: "source",
+  }));
   const observations = (data.observations || []).map((obs) => ({
     id: obs?.id,
     name: obs?.ref,
-    object: obs?.object,
     path: obs?.path,
+    docType: "observation",
+    object: obs?.object,
   }));
   const namedEntities = data.ner;
-  const allDocuments = [
-    ficheInfo,
-    ...sourceDocuments.map((doc) => ({ ...doc, docType: "source" })),
-    ...observations.map((doc) => ({
-      ...doc,
-      docType: "observation",
-    })),
-  ];
 
   const commentsData = data?.comments || [];
 
   return (
     <Layout>
       <Loading>
-        <FicheProvider allDocuments={allDocuments}>
+        <FicheProvider
+          fiche={fiche}
+          sourceDocuments={sourceDocuments}
+          observations={observations}
+        >
           <div className="flex flex-1 overflow-hidden">
             <div className="w-1/5 flex-shrink-0 border-r overflow-auto bg-gray-50">
               <Sidebar
-                ficheInfo={ficheInfo}
+                ficheInfo={fiche}
                 sourceDocuments={sourceDocuments}
                 observations={observations}
                 namedEntities={namedEntities}
               />
             </div>
-            <Display
-              ficheInfo={ficheInfo}
-              allDocuments={allDocuments}
-              commentsData={commentsData}
-            />
+            <Display ficheInfo={fiche} commentsData={commentsData} />
           </div>
         </FicheProvider>
       </Loading>

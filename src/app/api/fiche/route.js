@@ -5,7 +5,7 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
-  const data = id === "1" ? Data : null;
+  const data = id === "FICHE-2023-001" ? Data : null;
 
   if (!data) {
     return NextResponse.json({

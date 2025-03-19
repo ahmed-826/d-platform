@@ -17,7 +17,7 @@ const Sidebar = ({
 }) => {
   const { handleDocumentClick } = useFiche();
   useEffect(() => {
-    handleDocumentClick(sourceDocuments[0]?.id || observations[0]?.id || null);
+    handleDocumentClick(sourceDocuments[0] || observations[0] || null);
   }, []);
 
   return (
