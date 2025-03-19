@@ -23,7 +23,6 @@ const Entities = ({ namedEntities }) => {
     }
   };
 
-  // Memoize the handleSectionToggle function
   const handleSectionToggle = useCallback((isOpen) => {
     setIsSectionOpen(isOpen);
     if (!isOpen) {
@@ -31,6 +30,7 @@ const Entities = ({ namedEntities }) => {
     }
   }, []);
 
+  if (!Object.keys(groupedEntities).length) return;
   return (
     <SidebarSection
       title="Entités Nommées"

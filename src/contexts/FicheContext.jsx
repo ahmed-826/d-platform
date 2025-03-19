@@ -14,26 +14,29 @@ export const FicheProvider = ({ children, allDocuments }) => {
 
     if (entireMode) {
       const index = allDocuments.findIndex((doc) => doc.id === id);
-      setEntireModeselectedDocIndex(index);
+      setEntireModeselectedDocIndex(index !== -1 ? index : null);
     }
   };
 
   const toggleEntireMode = (id) => {
     if (!entireMode) {
       const index = allDocuments.findIndex((doc) => doc.id === id);
-      setEntireModeselectedDocIndex(index);
+      setEntireModeselectedDocIndex(index !== -1 ? index : null);
     }
     setEntireMode((prev) => !prev);
   };
 
   const navigatePrevious = () => {
-    if (EntireModeselectedDocIndex > 0) {
+    if (EntireModeselectedDocIndex !== null && EntireModeselectedDocIndex > 0) {
       setEntireModeselectedDocIndex((prev) => prev - 1);
     }
   };
 
   const navigateNext = () => {
-    if (EntireModeselectedDocIndex < allDocuments.length - 1) {
+    if (
+      EntireModeselectedDocIndex !== null &&
+      EntireModeselectedDocIndex < allDocuments.length - 1
+    ) {
       setEntireModeselectedDocIndex((prev) => prev + 1);
     }
   };

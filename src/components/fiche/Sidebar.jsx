@@ -6,12 +6,20 @@ import Observations from "./sidebar/Observations";
 import SourceDocuments from "./sidebar/SourceDocuments";
 import Entities from "./sidebar/Entities";
 
+import { useFiche } from "@/contexts/FicheContext";
+import { useEffect } from "react";
+
 const Sidebar = ({
   ficheInfo,
   sourceDocuments,
   observations,
   namedEntities,
 }) => {
+  const { handleDocumentClick } = useFiche();
+  useEffect(() => {
+    handleDocumentClick(sourceDocuments[0]?.id || observations[0]?.id || null);
+  }, []);
+
   return (
     <div className="h-full flex flex-col border-r bg-card overflow-auto">
       <div className="p-4">

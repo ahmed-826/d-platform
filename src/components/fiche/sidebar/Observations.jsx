@@ -5,6 +5,7 @@ import { useFiche } from "@/contexts/FicheContext";
 const Observations = ({ observations }) => {
   const { selectedDocId, handleDocumentClick } = useFiche();
 
+  if (!observations.length) return;
   return (
     <SidebarSection title="Observations" icon={Lightbulb} defaultOpen>
       <div className="space-y-1">

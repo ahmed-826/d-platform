@@ -27,19 +27,20 @@ const page = async ({ params }) => {
   }
 
   const ficheInfo = {
-    id: data.id,
-    name: data.ref,
-    source: data.source,
-    createdBy: data.created_by,
-    path: data.path,
+    id: data?.id,
+    name: data?.ref,
+    source: data?.source,
+    createdBy: data?.created_by,
+    path: data?.path,
+    status: data?.status,
     docType: "fiche",
   };
-  const sourceDocuments = data.sourceDocuments;
-  const observations = data.observations.map((obs) => ({
-    id: obs.id,
-    name: obs.ref,
-    object: obs.object,
-    path: obs.path,
+  const sourceDocuments = data.sourceDocuments || [];
+  const observations = (data.observations || []).map((obs) => ({
+    id: obs?.id,
+    name: obs?.ref,
+    object: obs?.object,
+    path: obs?.path,
   }));
   const namedEntities = data.ner;
   const allDocuments = [
@@ -51,7 +52,7 @@ const page = async ({ params }) => {
     })),
   ];
 
-  const commentsData = data.comments;
+  const commentsData = data?.comments || [];
 
   return (
     <Layout>

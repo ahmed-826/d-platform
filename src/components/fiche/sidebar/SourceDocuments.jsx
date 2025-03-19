@@ -1,15 +1,11 @@
 import SidebarSection from "./SidebarSection";
 import { FileText } from "lucide-react";
 import { useFiche } from "@/contexts/FicheContext";
-import { useEffect } from "react";
 
 const SourceDocuments = ({ sourceDocuments }) => {
   const { selectedDocId, handleDocumentClick } = useFiche();
 
-  useEffect(() => {
-    handleDocumentClick(sourceDocuments[0].id);
-  }, []);
-
+  if (!sourceDocuments.length) return;
   return (
     <SidebarSection title="Documents Sources" icon={FileText} defaultOpen>
       <div className="space-y-1">
@@ -19,7 +15,7 @@ const SourceDocuments = ({ sourceDocuments }) => {
             className={`px-2 py-2 rounded-md cursor-pointer text-sm transition-colors hover:bg-muted flex items-center ${
               selectedDocId === doc.id ? "bg-muted font-medium" : ""
             }`}
-            onClick={() => handleDocumentClick(doc.id)}
+            onClick={() => handleDocumentClick(doc?.id || null)}
           >
             <FileText size={14} className="mr-2 text-gray-600" />
             <span>{doc.name}</span>
