@@ -13,11 +13,13 @@ import {
   View,
 } from "lucide-react";
 import { useFiche } from "@/contexts/FicheContext";
+import EmptyViewer from "./EmptyViewer";
 
 const DocumentViewer = ({ document, withNavigate = false }) => {
   const { entireMode, toggleEntireMode, navigatePrevious, navigateNext } =
     useFiche();
 
+  if (!document) return <EmptyViewer />;
   const withPreview = document.docType === "observation";
   const extension = document.path.split(".").pop();
 
@@ -79,7 +81,7 @@ const DocumentViewer = ({ document, withNavigate = false }) => {
                   title="Aperçu"
                 >
                   <View size={16} />
-                </Button>{" "}
+                </Button>
               </Link>
             )}
             <Button

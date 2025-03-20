@@ -18,9 +18,7 @@ const Display = ({ ficheInfo }) => {
       <div className="w-2/5 flex flex-col p-4 overflow-hidden bg-gray-50 border-l h-full">
         <div className="flex-1 overflow-hidden">
           <div className="h-full">
-            {selectedDoc && (
-              <DocumentViewer document={selectedDoc} withNavigate />
-            )}
+            <DocumentViewer document={selectedDoc} withNavigate />
           </div>
         </div>
       </div>
