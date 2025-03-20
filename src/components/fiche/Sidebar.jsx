@@ -5,6 +5,7 @@ import GeneralInfo from "./sidebar/GeneralInfo";
 import Observations from "./sidebar/Observations";
 import SourceDocuments from "./sidebar/SourceDocuments";
 import Entities from "./sidebar/Entities";
+import Report from "./sidebar/Report";
 
 import { useFiche } from "@/contexts/FicheContext";
 import { useEffect } from "react";
@@ -37,6 +38,8 @@ const Sidebar = ({
 
         <Entities namedEntities={namedEntities} />
       </ScrollArea>
+
+      <Report />
     </div>
   );
 };
