@@ -1,9 +1,8 @@
 "use client";
 import { useFiche } from "@/contexts/FicheContext";
 import DocumentViewer from "@/components/fiche/display/DocumentViewer";
-import Comments from "@/components/fiche/display/Comments";
 
-const Display = ({ ficheInfo, commentsData }) => {
+const Display = ({ ficheInfo }) => {
   const { selectedDoc, entireMode } = useFiche();
 
   return !entireMode ? (
@@ -13,8 +12,6 @@ const Display = ({ ficheInfo, commentsData }) => {
           <div className="flex-1 min-h-0">
             <DocumentViewer document={ficheInfo} />
           </div>
-
-          <Comments commentsData={commentsData} />
         </div>
       </div>
 
