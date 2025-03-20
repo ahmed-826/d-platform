@@ -18,10 +18,18 @@ export const FicheProvider = ({
   };
 
   const toggleEntireMode = (document) => {
-    if (!entireMode) {
-      setSelectedDoc(document);
-    }
-    setEntireMode((prev) => !prev);
+    setEntireMode((prev) => {
+      if (!prev) {
+        setSelectedDoc(document);
+      } else {
+        if (document.docType === "fiche") {
+          setSelectedDoc(sourceDocuments[0] || observations[0] || null);
+        } else {
+          setSelectedDoc(document);
+        }
+      }
+      return !prev;
+    });
   };
 
   const navigatePrevious = (document) => {
