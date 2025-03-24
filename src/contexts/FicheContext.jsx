@@ -72,6 +72,9 @@ export const FicheProvider = ({
         toggleEntireMode,
         navigatePrevious,
         navigateNext,
+        fiche,
+        sourceDocuments,
+        observations,
       }}
     >
       {children}

@@ -4,7 +4,6 @@ import DocumentViewer from "@/components/fiche/display/DocumentViewer";
 
 const Display = ({ ficheInfo }) => {
   const { selectedDoc, entireMode } = useFiche();
-
   return !entireMode ? (
     <div className="flex-1 flex overflow-hidden">
       <div className="w-3/5 flex flex-col p-4 overflow-hidden bg-muted/20">

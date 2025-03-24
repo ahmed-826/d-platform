@@ -14,6 +14,11 @@ export const Data = {
   source: "TechCorp",
   sourceDocuments: [
     {
+      id: "source-document-0",
+      name: "document v00",
+      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+    },
+    {
       id: "source-document-1",
       name: "document v11",
       path: "https://www.rd.usda.gov/sites/default/files/pdf-sample_0.pdf",
@@ -21,6 +26,41 @@ export const Data = {
     {
       id: "source-document-2",
       name: "document v22",
+      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+    },
+    {
+      id: "source-document-3",
+      name: "document v33",
+      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+    },
+    {
+      id: "source-document-4",
+      name: "document v44",
+      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+    },
+    {
+      id: "source-document-5",
+      name: "document v55",
+      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+    },
+    {
+      id: "source-document-6",
+      name: "document v66",
+      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+    },
+    {
+      id: "source-document-7",
+      name: "document v77",
+      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+    },
+    {
+      id: "source-document-8",
+      name: "document v88",
+      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+    },
+    {
+      id: "source-document-9",
+      name: "document v99",
       path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
     },
   ],

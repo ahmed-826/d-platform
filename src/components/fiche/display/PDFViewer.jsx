@@ -1,4 +1,3 @@
-"use client";
 const PDFViewer = ({ path, name }) => {
   return (
     <div className="h-full w-full">
