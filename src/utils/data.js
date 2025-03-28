@@ -38,31 +38,6 @@ export const Data = {
       name: "document v44",
       path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
     },
-    {
-      id: "source-document-5",
-      name: "document v55",
-      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
-    },
-    {
-      id: "source-document-6",
-      name: "document v66",
-      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
-    },
-    {
-      id: "source-document-7",
-      name: "document v77",
-      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
-    },
-    {
-      id: "source-document-8",
-      name: "document v88",
-      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
-    },
-    {
-      id: "source-document-9",
-      name: "document v99",
-      path: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
-    },
   ],
   observations: [
     {

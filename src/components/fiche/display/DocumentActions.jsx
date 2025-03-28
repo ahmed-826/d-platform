@@ -51,13 +51,12 @@ const DocumentActions = ({
         </>
       )}
       {withPreview && (
-        <Link href={`/fiche/${document.name}`}>
+        <Link href={`/fiche/${document.name}`} target="_blank">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigateNext(document)}
             className="h-7 w-7 p-0 hover:bg-gray-200"
-            title="Aperçu"
+            title="Explorer"
           >
             <View size={16} />
           </Button>

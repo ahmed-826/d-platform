@@ -16,6 +16,7 @@ const Observations = ({ observations }) => {
               selectedDoc?.id === obs.id ? "bg-muted font-medium" : ""
             }`}
             onClick={() => handleDocumentClick(obs)}
+            onDoubleClick={() => window.open(`/fiche/${obs.name}`)}
           >
             <Lightbulb size={14} className="mr-2 text-gray-600" />
             <span>{obs.name}</span>
