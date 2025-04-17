@@ -2,14 +2,14 @@
 import { useFiche } from "@/contexts/FicheContext";
 import DocumentViewer from "@/components/fiche/display/DocumentViewer";
 
-const Display = ({ ficheInfo }) => {
-  const { selectedDoc, entireMode } = useFiche();
+const Display = () => {
+  const { fiche, selectedDoc, entireMode } = useFiche();
   return !entireMode ? (
     <div className="flex-1 flex overflow-hidden">
       <div className="w-3/5 flex flex-col p-4 overflow-hidden bg-muted/20">
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 min-h-0">
-            <DocumentViewer document={ficheInfo} />
+            <DocumentViewer document={fiche} />
           </div>
         </div>
       </div>

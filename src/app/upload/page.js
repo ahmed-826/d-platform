@@ -1,119 +1,31 @@
-"use client";
+import UploadHistory from "@/components/upload/UploadHistory";
 
-import { useState } from "react";
-import UploadNavigation from "@/components/upload/Navigation";
-import HistoryView from "@/components/upload/HistoryView";
-import UploadView from "@/components/upload/UploadView";
-import ResultView from "@/components/upload/ResultView";
+import { getUploadsByUserId } from "@/lib/services/uploadService";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
-const Upload = () => {
-  const [currentView, setCurrentView] = useState("history");
-  const [uploadResults, setUploadResults] = useState([]);
-  const [selectedHistory, setSelectedHistory] = useState(null);
-  const [fileName, setFileName] = useState("");
+const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
 
-  const handleUploadComplete = (results, name) => {
-    const resultsWithStatus = results.map((result) => ({
-      ...result,
-      uploadStatus: "Suspendue",
-    }));
+const page = async () => {
+  const userId = "1025a3bb-7349-4d5b-ae5f-85d448dbe67f";
 
-    setUploadResults(resultsWithStatus);
-    setFileName(name);
-    setCurrentView("result");
-  };
+  const uploads = await getUploadsByUserId(userId);
 
-  const handleStatusChange = (ref, newStatus) => {
-    setUploadResults((prev) =>
-      prev.map((result) =>
-        result.ref === ref ? { ...result, uploadStatus: newStatus } : result
-      )
-    );
+  const formattedUploads = uploads.map((upload) => ({
+    id: upload.id,
+    name: upload.name,
+    status: upload.status,
+    date: format(upload.date, "dd MMMM yyyy 'à' HH:mm:ss", {
+      locale: fr,
+    }),
+    user: upload.user.username,
+    type: upload.type,
+    absolutePath: FILE_STORAGE_PATH + upload.path,
+    successfulFichesCount: upload.fiches.length,
+    totalFichesCount: upload.fiches.length + upload.failedFiches.length,
+  }));
 
-    if (selectedHistory && selectedHistory.results) {
-      const updatedHistory = {
-        ...selectedHistory,
-        results: selectedHistory.results.map((result) =>
-          result.ref === ref ? { ...result, uploadStatus: newStatus } : result
-        ),
-      };
-      setSelectedHistory(updatedHistory);
-    }
-  };
-
-  const handleConsult = (historyItem) => {
-    if (!historyItem.results) {
-      const mockResults = Array.from({ length: historyItem.count }, (_, i) => ({
-        ref: `REF-${historyItem.id}-${i + 1}`,
-        source: historyItem.name,
-        status: Math.random() > 0.2 ? "success" : "failed",
-        probleme: Math.random() > 0.2 ? "---" : "Error processing data",
-        uploadStatus: "Suspendue",
-      }));
-      historyItem.results = mockResults;
-    }
-
-    setSelectedHistory(historyItem);
-    setCurrentView("consult");
-  };
-
-  const navigateToView = (view) => {
-    if (view === "history") {
-      setSelectedHistory(null);
-      setCurrentView(view);
-    } else if (
-      (view === "upload" &&
-        (currentView === "upload" ||
-          currentView === "result" ||
-          currentView === "consult")) ||
-      (view === "result" && currentView === "result") ||
-      (view === "consult" && currentView === "consult")
-    ) {
-      setCurrentView(view);
-    }
-  };
-
-  return (
-    <div className="container mx-auto py-8 max-w-7xl">
-      <h1 className="text-2xl font-bold mb-6">Upload Management</h1>
-
-      <UploadNavigation
-        currentView={currentView}
-        onNavigate={navigateToView}
-        selectedHistoryName={selectedHistory?.name}
-      />
-
-      <div className="mt-6">
-        {currentView === "history" && (
-          <HistoryView
-            onUpload={() => setCurrentView("upload")}
-            onConsult={handleConsult}
-          />
-        )}
-
-        {currentView === "upload" && (
-          <UploadView onUploadComplete={handleUploadComplete} />
-        )}
-
-        {currentView === "result" && (
-          <ResultView
-            results={uploadResults}
-            fileName={fileName}
-            onStatusChange={handleStatusChange}
-          />
-        )}
-
-        {currentView === "consult" && selectedHistory && (
-          <ResultView
-            results={selectedHistory.results || []}
-            fileName={selectedHistory.name}
-            onStatusChange={handleStatusChange}
-            isConsultView
-          />
-        )}
-      </div>
-    </div>
-  );
+  return <UploadHistory uploads={formattedUploads} />;
 };
 
-export default Upload;
+export default page;

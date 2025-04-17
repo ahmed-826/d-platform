@@ -7,20 +7,7 @@ import SourceDocuments from "./sidebar/SourceDocuments";
 import Entities from "./sidebar/Entities";
 import Report from "./sidebar/Report";
 
-import { useFiche } from "@/contexts/FicheContext";
-import { useEffect } from "react";
-
-const Sidebar = ({
-  ficheInfo,
-  sourceDocuments,
-  observations,
-  namedEntities,
-}) => {
-  const { handleDocumentClick } = useFiche();
-  useEffect(() => {
-    handleDocumentClick(sourceDocuments[0] || observations[0] || null);
-  }, []);
-
+const Sidebar = () => {
   return (
     <div className="h-full flex flex-col border-r bg-card overflow-auto">
       <div className="p-4">
@@ -30,13 +17,13 @@ const Sidebar = ({
       <Separator />
 
       <ScrollArea className="flex-1 p-4">
-        <GeneralInfo generalInfo={ficheInfo} />
+        <GeneralInfo />
 
-        <SourceDocuments sourceDocuments={sourceDocuments} />
+        <SourceDocuments />
 
-        <Observations observations={observations} />
+        <Observations />
 
-        <Entities namedEntities={namedEntities} />
+        <Entities />
       </ScrollArea>
 
       <Report />

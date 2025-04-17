@@ -1,9 +1,9 @@
-import SidebarSection from "./SidebarSection";
 import { FileText } from "lucide-react";
+import SidebarSection from "./SidebarSection";
 import { useFiche } from "@/contexts/FicheContext";
 
-const SourceDocuments = ({ sourceDocuments }) => {
-  const { selectedDoc, handleDocumentClick } = useFiche();
+const SourceDocuments = () => {
+  const { sourceDocuments, selectedDoc, handleDocumentClick } = useFiche();
 
   if (!sourceDocuments.length) return;
   return (

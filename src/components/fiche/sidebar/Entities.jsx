@@ -1,8 +1,10 @@
-import { useState, useCallback } from "react";
+import { Users, Building, MapPin, ShieldQuestion } from "lucide-react";
 import SidebarSection from "./SidebarSection";
-import { Users, Building, MapPin } from "lucide-react";
+import { useState, useCallback } from "react";
+import { useFiche } from "@/contexts/FicheContext";
 
-const Entities = ({ namedEntities }) => {
+const Entities = () => {
+  const { namedEntities } = useFiche();
   const [expandedEntityIds, setExpandedEntityIds] = useState([]);
   const [isSectionOpen, setIsSectionOpen] = useState(false);
 
@@ -30,6 +32,47 @@ const Entities = ({ namedEntities }) => {
     }
   }, []);
 
+  const renderNERTitleByCategory = (category) => {
+    switch (category) {
+      case "PERSON":
+        return (
+          <>
+            <Users size={14} className="mr-1 text-primary/70" />
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Personnes
+            </div>
+          </>
+        );
+      case "ORGANIZATION":
+        return (
+          <>
+            <Building size={14} className="mr-1 text-primary/70" />
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Organisations
+            </div>
+          </>
+        );
+      case "LOCATION":
+        return (
+          <>
+            <MapPin size={14} className="mr-1 text-primary/70" />
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Lieux
+            </div>
+          </>
+        );
+      default:
+        return (
+          <>
+            <ShieldQuestion size={14} className="mr-1 text-primary/70" />
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Inconnue
+            </div>
+          </>
+        );
+    }
+  };
+
   if (!Object.keys(groupedEntities).length) return;
   return (
     <SidebarSection
@@ -40,24 +83,7 @@ const Entities = ({ namedEntities }) => {
       {Object.entries(groupedEntities).map(([category, entities]) => (
         <div key={category} className="mb-3">
           <div className="flex items-center mb-1">
-            {category === "person" && (
-              <Users size={14} className="mr-1 text-primary/70" />
-            )}
-            {category === "organization" && (
-              <Building size={14} className="mr-1 text-primary/70" />
-            )}
-            {category === "location" && (
-              <MapPin size={14} className="mr-1 text-primary/70" />
-            )}
-            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {category === "person"
-                ? "Personnes"
-                : category === "organization"
-                ? "Organisations"
-                : category === "location"
-                ? "Lieux"
-                : category}
-            </div>
+            {renderNERTitleByCategory(category)}
           </div>
           <div className="ml-1">
             {entities.map((entity) => (

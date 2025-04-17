@@ -1,5 +1,3 @@
-import "./index.css";
-
 export const metadata = {
   title: "Upload",
   description: "Upload les fiches",

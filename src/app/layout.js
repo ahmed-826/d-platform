@@ -1,4 +1,6 @@
 import "./globals.css";
+import Navigation from "@/components/Navigation";
+import { AppProvider } from "@/contexts/AppContext";
 
 export const metadata = {
   title: "Home",
@@ -8,7 +10,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="flex flex-col w-screen h-screen">
+        <AppProvider>
+          <Navigation />
+          {children}
+        </AppProvider>
+      </body>
     </html>
   );
 }

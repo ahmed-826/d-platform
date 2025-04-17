@@ -1,12 +1,15 @@
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Upload, AlertCircle } from "lucide-react";
+import { Upload } from "lucide-react";
 
-const FileUpload = ({ onUploadComplete }) => {
+import { useApp } from "@/contexts/AppContext";
+
+const FileUpload = () => {
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState(null);
+  const router = useRouter();
+  const { addPage, returnToPreviousPage } = useApp();
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -27,74 +30,43 @@ const FileUpload = ({ onUploadComplete }) => {
   };
 
   const handleFileSelect = (selectedFile) => {
-    setError(null);
-
     if (
-      selectedFile.type !== "application/zip" &&
-      !selectedFile.name.endsWith(".zip")
+      ["application/zip", "application/x-zip-compressed"].includes(
+        selectedFile?.type
+      ) &&
+      selectedFile?.name?.endsWith(".zip")
     ) {
-      setError("Please upload a .zip file");
-      return;
+      setFile(selectedFile);
     }
-
-    setFile(selectedFile);
   };
 
   const handleUpload = async () => {
     if (!file) return;
 
-    setIsUploading(true);
-    setError(null);
+    // uploading logic (to backend)
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "file",
+        file: file,
+      }),
+    }).then((res) => res.json());
 
-    try {
-      // Simulate file processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Mock results
-      const results = [
-        {
-          ref: "ABC-1234",
-          source: "TechCorp",
-          status: "success",
-          probleme: "---",
-          uploadStatus: "Suspendue",
-        },
-        {
-          ref: "ABC-5678",
-          source: "TechCorp",
-          status: "failed",
-          probleme: "data.json n'exist pas",
-          uploadStatus: "Suspendue",
-        },
-        {
-          ref: "ABC-9012",
-          source: "TechCorp",
-          status: "success",
-          probleme: "---",
-          uploadStatus: "Suspendue",
-        },
-        {
-          ref: "ABC-3456",
-          source: "TechCorp",
-          status: "success",
-          probleme: "---",
-          uploadStatus: "Suspendue",
-        },
-        {
-          ref: "ABC-7890",
-          source: "TechCorp",
-          status: "failed",
-          probleme: "Missing metadata",
-          uploadStatus: "Suspendue",
-        },
-      ];
-
-      onUploadComplete(results, file.name);
-    } catch (err) {
-      setError("An error occurred during upload. Please try again.");
-    } finally {
-      setIsUploading(false);
+    if (response.error) {
+      alert("Erreur lors de l'envoi du file.");
+      return;
     }
+    const newUploadId = response.data.id;
+    returnToPreviousPage();
+    addPage({
+      name: file.name,
+      path: `/upload/consult/${newUploadId}`,
+      type: "upload",
+    });
+    router.push(`/upload/consult/${newUploadId}`);
   };
 
   return (
@@ -120,10 +92,10 @@ const FileUpload = ({ onUploadComplete }) => {
 
         <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
         <h3 className="text-lg font-medium mb-2">
-          Drag & Drop Your .zip File Here
+          Glissez-déposez votre fichier .zip ici
         </h3>
         <p className="text-sm text-gray-500 mb-4">
-          or click to browse your files
+          ou cliquez pour parcourir votre fichier
         </p>
 
         {file && (
@@ -136,16 +108,9 @@ const FileUpload = ({ onUploadComplete }) => {
         )}
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 text-red-500">
-          <AlertCircle className="h-4 w-4" />
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
-
       <div className="flex justify-end">
-        <Button onClick={handleUpload} disabled={!file || isUploading}>
-          {isUploading ? "Uploading..." : "Upload File"}
+        <Button onClick={handleUpload} disabled={!file}>
+          Téléverser les fichiers
         </Button>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useFiche } from "@/contexts/FicheContext";
 import { Download, X, GripVertical, RefreshCcw } from "lucide-react";
-import { FaFilePdf, FaFileWord, FaRegFileZipper } from "react-icons/fa6";
+import { FaFilePdf, FaFileWord } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -11,15 +11,26 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { id } from "date-fns/locale";
 
-const DownloadAction = () => {
+const DownloadAction = ({ withDownloadForFicheOnly }) => {
   const { sourceDocuments } = useFiche();
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState("pdf");
+  const [downloadMode, setDownloadMode] = useState("combined");
   const [includeSourceDocs, setIncludeSourceDocs] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState([]);
   const parentRef = useRef(null);
+
+  if (!withDownloadForFicheOnly) return;
 
   const handleIncludeSourceDocsChange = (checked) => {
     setIncludeSourceDocs(checked);
@@ -133,31 +144,6 @@ const DownloadAction = () => {
                     Word
                   </span>
                 </div>
-
-                <div
-                  className={`flex items-center space-x-2 p-2 rounded-lg cursor-pointer border ${
-                    downloadFormat === "zip"
-                      ? "border-primary bg-primary/10"
-                      : "border-input"
-                  }`}
-                  onClick={() => setDownloadFormat("zip")}
-                >
-                  <FaRegFileZipper
-                    size={18}
-                    className={
-                      downloadFormat === "zip"
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    }
-                  />
-                  <span
-                    className={
-                      downloadFormat === "zip" ? "text-primary font-medium" : ""
-                    }
-                  >
-                    Zip
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -178,88 +164,80 @@ const DownloadAction = () => {
             </div>
 
             {includeSourceDocs && (
+              <div className="space-y-3 border rounded-md p-3">
+                <h4 className="font-medium text-sm">Mode de téléchargement</h4>
+                <Select value={downloadMode} onValueChange={setDownloadMode}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sélectionnez un mode de téléchargement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="combined">
+                      Téléchargement combiné
+                    </SelectItem>
+                    <SelectItem value="separate">
+                      Téléchargement séparé
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {includeSourceDocs && (
               <div className="space-y-2 border rounded-md p-3">
                 <h4 className="flex justify-between font-medium text-sm">
                   <span className="py-1"> Sélectionner les documents</span>
-                  {downloadFormat !== "zip" && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setSelectedDocs(sourceDocuments.map((doc) => doc.id))
-                      }
-                      className="h-7 w-7 p-0 hover:bg-gray-200"
-                      title="Réinitialiser"
-                    >
-                      <RefreshCcw />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setSelectedDocs(sourceDocuments.map((doc) => doc.id))
+                    }
+                    className="h-7 w-7 p-0 hover:bg-gray-200"
+                    title="Réinitialiser"
+                  >
+                    <RefreshCcw />
+                  </Button>
                 </h4>
-                <div className="max-h-[300px] overflow-y-auto">
-                  {downloadFormat !== "zip" ? (
-                    <DragDropContext onDragEnd={handleDragEnd}>
-                      <Droppable
-                        droppableId="source-documents"
-                        className="relative"
-                      >
-                        {(provided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            className="max-h-[300px] overflow-y-auto space-y-2"
-                          >
-                            {selectedDocs.map((docId, index) => {
-                              const document = sourceDocuments.find(
-                                (d) => d.id === docId
-                              );
-                              return (
-                                <DraggableDocumentItem
-                                  document={document}
-                                  index={index}
-                                  toggleDocSelection={toggleDocSelection}
-                                  parentRef={parentRef}
-                                />
-                              );
-                            })}
+                <div className="max-h-[200px] overflow-y-auto">
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable
+                      droppableId="source-documents"
+                      className="relative"
+                    >
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className="overflow-y-auto space-y-2"
+                        >
+                          {selectedDocs.map((docId, index) => {
+                            const document = sourceDocuments.find(
+                              (d) => d.id === docId
+                            );
+                            return (
+                              <DraggableDocumentItem
+                                document={document}
+                                index={index}
+                                toggleDocSelection={toggleDocSelection}
+                                parentRef={parentRef}
+                              />
+                            );
+                          })}
 
-                            {sourceDocuments.map((document) => {
-                              if (selectedDocs.includes(document.id)) return;
-                              return (
-                                <UndraggableDocumentItem
-                                  document={document}
-                                  toggleDocSelection={toggleDocSelection}
-                                />
-                              );
-                            })}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    </DragDropContext>
-                  ) : (
-                    <div className="max-h-[300px] overflow-y-auto space-y-2">
-                      {sourceDocuments.map((document) => (
-                        <div className="flex items-center justify-between border-b pb-1 mb-2">
-                          <div className="flex items-center space-x-2 py-2">
-                            <Checkbox
-                              key={`doc-${document.id}`}
-                              id={`doc-${document.id}`}
-                              checked={selectedDocs.includes(document.id)}
-                              onCheckedChange={() =>
-                                toggleDocSelection(document.id)
-                              }
-                            />
-                            <label
-                              htmlFor={`doc-${document.id}`}
-                              className="text-sm leading-none"
-                            >
-                              {document.name}
-                            </label>
-                          </div>
+                          {sourceDocuments.map((document) => {
+                            if (selectedDocs.includes(document.id)) return;
+                            return (
+                              <UndraggableDocumentItem
+                                document={document}
+                                toggleDocSelection={toggleDocSelection}
+                              />
+                            );
+                          })}
+                          {provided.placeholder}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      )}
+                    </Droppable>
+                  </DragDropContext>
                 </div>
               </div>
             )}

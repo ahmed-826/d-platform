@@ -1,5 +1,6 @@
 "use client";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { useApp } from "@/contexts/AppContext";
 
 const FicheContext = createContext(null);
 
@@ -8,9 +9,16 @@ export const FicheProvider = ({
   fiche,
   sourceDocuments,
   observations,
+  namedEntities,
 }) => {
+  const { addToBreadcrumbs } = useApp();
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [entireMode, setEntireMode] = useState(false);
+
+  useEffect(() => {
+    handleDocumentClick(sourceDocuments[0] || observations[0] || null);
+    addToBreadcrumbs({ title: fiche.ref, href: `/fiche/${fiche.id}` });
+  }, []);
 
   const handleDocumentClick = (document) => {
     if (document?.id && document?.id !== selectedDoc?.id)
@@ -66,15 +74,16 @@ export const FicheProvider = ({
   return (
     <FicheContext.Provider
       value={{
+        fiche,
+        sourceDocuments,
+        observations,
+        namedEntities,
         selectedDoc,
         handleDocumentClick,
         entireMode,
         toggleEntireMode,
         navigatePrevious,
         navigateNext,
-        fiche,
-        sourceDocuments,
-        observations,
       }}
     >
       {children}

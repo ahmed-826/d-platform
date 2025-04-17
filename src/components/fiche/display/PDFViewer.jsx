@@ -1,17 +1,10 @@
-const PDFViewer = ({ path, name }) => {
+const PDFViewer = ({ path }) => {
   return (
     <div className="h-full w-full">
-      {path ? (
-        <iframe
-          src={path}
-          className="w-full h-full border-0 bg-white"
-          title={name || "PDF Viewer"}
-        />
-      ) : (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          Aucun document disponible
-        </div>
-      )}
+      <iframe
+        src={`/api/file/${encodeURIComponent(path)}`}
+        className="w-full h-full border-0 bg-white"
+      />
     </div>
   );
 };

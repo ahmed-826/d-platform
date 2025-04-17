@@ -1,11 +1,17 @@
 import SidebarSection from "./SidebarSection";
 import { Lightbulb } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useFiche } from "@/contexts/FicheContext";
 
-const Observations = ({ observations }) => {
-  const { selectedDoc, handleDocumentClick } = useFiche();
+const Observations = () => {
+  const { observations, selectedDoc, handleDocumentClick } = useFiche();
+  const router = useRouter();
 
   if (!observations.length) return;
+
+  const handleDocumentDoubleClick = (obs) => {
+    router.push(`/fiche/${obs.id}`);
+  };
   return (
     <SidebarSection title="Observations" icon={Lightbulb} defaultOpen>
       <div className="space-y-1">
@@ -16,7 +22,7 @@ const Observations = ({ observations }) => {
               selectedDoc?.id === obs.id ? "bg-muted font-medium" : ""
             }`}
             onClick={() => handleDocumentClick(obs)}
-            onDoubleClick={() => window.open(`/fiche/${obs.name}`)}
+            onDoubleClick={() => handleDocumentDoubleClick(obs)}
           >
             <Lightbulb size={14} className="mr-2 text-gray-600" />
             <span>{obs.name}</span>

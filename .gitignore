@@ -1,4 +1,10 @@
 data.js
+upload.js
+
+scripts/
+
+.env
+public
 
 # dependencies
 /node_modules

@@ -12,12 +12,14 @@ import {
 } from "@/components/ui/dialog";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
-const PrintAction = () => {
+const PrintAction = ({ withPrintForFicheOnly }) => {
   const { sourceDocuments } = useFiche();
   const [printOpen, setPrintOpen] = useState(false);
   const [includeSourceDocs, setIncludeSourceDocs] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState([]);
   const parentRef = useRef(null);
+
+  if (!withPrintForFicheOnly) return;
 
   const handleIncludeSourceDocsChange = (checked) => {
     setIncludeSourceDocs(checked);
@@ -110,7 +112,7 @@ const PrintAction = () => {
                     <RefreshCcw />
                   </Button>
                 </h4>
-                <div className="max-h-[300px] overflow-y-auto">
+                <div className="max-h-[200px] overflow-y-auto">
                   <DragDropContext onDragEnd={handleDragEnd}>
                     <Droppable
                       droppableId="source-documents"
@@ -120,7 +122,7 @@ const PrintAction = () => {
                         <div
                           ref={provided.innerRef}
                           {...provided.droppableProps}
-                          className="max-h-[300px] overflow-y-auto space-y-2"
+                          className="overflow-y-auto space-y-2"
                         >
                           {selectedDocs.map((docId, index) => {
                             const document = sourceDocuments.find(

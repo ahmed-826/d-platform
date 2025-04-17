@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,46 +11,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { X, FileText } from "lucide-react";
+import { useApp } from "@/contexts/AppContext";
 
-const FormUpload = ({ onUploadComplete }) => {
+const FormUpload = () => {
   const [source, setSource] = useState("");
   const [dump, setDump] = useState("");
   const [object, setObject] = useState("");
   const [synthesis, setSynthesis] = useState("");
-  const [formName, setFormName] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadName, setUploadName] = useState("");
+  const [sourceDocuments, setSourceDocuments] = useState([]);
+  const router = useRouter();
+  const { addPage, returnToPreviousPage } = useApp();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!source || !dump || !object) return;
+    if (!source || !object) return;
 
-    setIsSubmitting(true);
+    const generatedUploadName = `${
+      uploadName ? uploadName + "-" : ""
+    }Formulaire-${source}-${new Date().toLocaleDateString()}`;
+    const data = {
+      name: generatedUploadName,
+      source,
+      dump,
+      object,
+      synthesis,
+      sourceDocuments,
+      type: "form",
+    };
 
-    try {
-      // Simulate form processing
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+    // uploading logic (to backend)
 
-      // Create a form name if not provided
-      const generatedFormName =
-        formName || `Form Upload - ${new Date().toLocaleDateString()}`;
+    const newUploadId = response.data.id;
 
-      // Mock results
-      const results = [
-        {
-          ref: `FORM-${Date.now()}-1`,
-          source,
-          status: "success",
-          probleme: "---",
-          uploadStatus: "Suspendue",
-        },
-      ];
+    returnToPreviousPage();
+    addPage({
+      name: generatedUploadName,
+      path: `/upload/consult/${newUploadId}`,
+      type: "upload",
+    });
+    router.push(`/upload/consult/${newUploadId}`);
+  };
 
-      onUploadComplete(results, generatedFormName);
-    } catch (err) {
-      console.error("Error submitting form:", err);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleSourceDocumentSelect = (selectedDocs) => {
+    if (!selectedDocs) return;
+
+    setSourceDocuments((prev) => [...prev, ...Array.from(selectedDocs)]);
+  };
+
+  const removeSourceDocument = (index) => {
+    setSourceDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -58,12 +70,12 @@ const FormUpload = ({ onUploadComplete }) => {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="form-name">Form Name</Label>
+              <Label htmlFor="form-name">Nom d'upload</Label>
               <Input
                 id="form-name"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Enter a name for this form upload"
+                value={uploadName}
+                onChange={(e) => setUploadName(e.target.value)}
+                placeholder="Entrez un nom pour cet upload"
               />
             </div>
 
@@ -71,7 +83,7 @@ const FormUpload = ({ onUploadComplete }) => {
               <Label htmlFor="source">Source</Label>
               <Select value={source} onValueChange={setSource}>
                 <SelectTrigger id="source">
-                  <SelectValue placeholder="Select a source" />
+                  <SelectValue placeholder="Sélectionnez une source" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="TechCorp">TechCorp</SelectItem>
@@ -82,72 +94,100 @@ const FormUpload = ({ onUploadComplete }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="dump">Dump</Label>
-              <Select value={dump} onValueChange={setDump}>
-                <SelectTrigger id="dump">
-                  <SelectValue placeholder="Select a dump" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Dump-2023-10">
-                    October 2023 Dump
-                  </SelectItem>
-                  <SelectItem value="Dump-2023-09">
-                    September 2023 Dump
-                  </SelectItem>
-                  <SelectItem value="Dump-2023-08">August 2023 Dump</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date">Generate Date</Label>
-              <Input
-                id="date"
-                type="date"
-                defaultValue={new Date().toISOString().split("T")[0]}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="dump">Dump</Label>
+            <Select value={dump} onValueChange={setDump}>
+              <SelectTrigger id="dump">
+                <SelectValue placeholder="Sélectionnez un dump" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Dump-2023-10">Dump Octobre 2023</SelectItem>
+                <SelectItem value="Dump-2023-09">
+                  Dump Septembre 2023
+                </SelectItem>
+                <SelectItem value="Dump-2023-08">Dump Août 2023</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="object">Object</Label>
+            <Label htmlFor="object">Objet</Label>
             <Input
               id="object"
               value={object}
               onChange={(e) => setObject(e.target.value)}
-              placeholder="Enter object"
+              placeholder="Entrez l'objet"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="synthesis">Synthesis</Label>
+            <Label htmlFor="synthesis">Synthèse</Label>
             <Textarea
               id="synthesis"
               value={synthesis}
               onChange={(e) => setSynthesis(e.target.value)}
-              placeholder="Enter synthesis"
+              placeholder="Entrez la synthèse"
               rows={4}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Attach Source Documents</Label>
-            <div className="flex items-center gap-2">
-              <Input type="file" multiple />
-              <Button type="button" variant="outline" size="sm">
-                +
+            <Label>Documents source</Label>
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="file"
+                id="form-source-documents"
+                className="hidden"
+                multiple
+                onChange={(e) => handleSourceDocumentSelect(e.target.files)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  document.getElementById("form-source-documents")?.click()
+                }
+              >
+                Ajouter des documents
               </Button>
+              <span className="text-sm text-gray-500">
+                {sourceDocuments.length} document
+                {sourceDocuments.length < 2 ? "" : "s"} sélectionné
+                {sourceDocuments.length < 2 ? "" : "s"}
+              </span>
             </div>
+
+            {sourceDocuments.length > 0 && (
+              <div className="space-y-2">
+                {sourceDocuments.map((doc, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between bg-white p-2 rounded border"
+                  >
+                    <div className="flex items-center">
+                      <FileText className="h-4 w-4 text-gray-500 mr-2" />
+                      <span className="text-sm truncate max-w-[400px]">
+                        {doc.name}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeSourceDocument(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit Form"}
-          </Button>
+          <Button type="submit">Soumettre le formulaire</Button>
         </div>
       </form>
     </div>
