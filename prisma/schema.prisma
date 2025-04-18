@@ -149,22 +149,21 @@ model FicheNer {
   nerId       String   @db.Uuid
   ner         Ner      @relation(fields: [nerId], references: [id])
   description String?
-  
-  
 
   @@unique([ficheId, nerId])
 }
 
 model Document {
-  id        String       @id @default(uuid()) @db.Uuid
-  name      String
-  type      DocumentType?
-  content   String?
-  meta      Json?
-  extension String
+  id           String       @id @default(uuid()) @db.Uuid
+  name         String
+  type         DocumentType?
+  content      String?
+  meta         Json?
+  extension    String
   replacement  String
-  ficheId   String?      @db.Uuid
-  fiche     Fiche?       @relation(fields: [ficheId], references: [id])
+  hash         String       @unique
+  ficheId      String?      @db.Uuid
+  fiche        Fiche?       @relation(fields: [ficheId], references: [id])
 }
 
 model FailedFiche {

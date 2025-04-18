@@ -33,16 +33,16 @@ export async function getFicheById(id) {
 
 export async function createFiche(data) {
   const {
+    ref,
     object,
     synthesis,
-    dateGenerate = new Date(),
+    dateGenerate,
     name,
     extension,
     replacement,
     dumpId,
     uploadId,
   } = data;
-  const ref = "Fiche-" + Math.floor(Math.random() * 1000000);
   return await prisma.fiche.create({
     data: {
       ref,
