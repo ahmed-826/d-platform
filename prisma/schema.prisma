@@ -68,11 +68,13 @@ model User {
 
 model Upload {
   id        String    @id @default(uuid()) @db.Uuid
-  name      String    @unique
+  name      String    
   date      DateTime  @default(now())
   type      UploadType @default(API)
   status    UploadStatus @default(PENDING)
-  path      String
+  path      String?
+  hash      String   @unique
+  fileName  String?
   userId    String   @db.Uuid
   user      User     @relation(fields: [userId], references: [id])
   

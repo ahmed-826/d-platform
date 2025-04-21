@@ -39,7 +39,9 @@ CREATE TABLE "Upload" (
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "type" "UploadType" NOT NULL DEFAULT 'API',
     "status" "UploadStatus" NOT NULL DEFAULT 'PENDING',
-    "path" TEXT NOT NULL,
+    "path" TEXT,
+    "hash" TEXT NOT NULL,
+    "fileName" TEXT,
     "userId" UUID NOT NULL,
 
     CONSTRAINT "Upload_pkey" PRIMARY KEY ("id")
@@ -121,6 +123,7 @@ CREATE TABLE "Document" (
     "meta" JSONB,
     "extension" TEXT NOT NULL,
     "replacement" TEXT NOT NULL,
+    "hash" TEXT NOT NULL,
     "ficheId" UUID,
 
     CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
@@ -142,7 +145,7 @@ CREATE TABLE "FailedFiche" (
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Upload_name_key" ON "Upload"("name");
+CREATE UNIQUE INDEX "Upload_hash_key" ON "Upload"("hash");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Source_name_key" ON "Source"("name");
@@ -155,6 +158,9 @@ CREATE UNIQUE INDEX "FicheRelation_observerId_observedId_key" ON "FicheRelation"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "FicheNer_ficheId_nerId_key" ON "FicheNer"("ficheId", "nerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Document_hash_key" ON "Document"("hash");
 
 -- AddForeignKey
 ALTER TABLE "Upload" ADD CONSTRAINT "Upload_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

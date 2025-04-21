@@ -57,17 +57,28 @@ export async function getUploadsByUserId(userId) {
   });
 }
 
+export async function getUploadByHash(hash) {
+  return await prisma.upload.findUnique({
+    where: { hash },
+  });
+}
+
 export async function createUpload(data) {
-  const { name, userId, type, path } = data;
+  const { name, type, hash, userId } = data;
   return await prisma.upload.create({
     data: {
       name,
       type,
-      path,
+      hash,
       user: { connect: { id: userId } },
     },
-    include: {
-      select: { id: true },
-    },
+    select: { id: true },
+  });
+}
+
+export async function updateUploadById(id, data) {
+  return await prisma.upload.update({
+    where: { id },
+    data: { ...data },
   });
 }
