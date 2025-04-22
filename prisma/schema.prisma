@@ -115,13 +115,14 @@ model Fiche {
   id             String       @id @default(uuid()) @db.Uuid
   ref            String
   object         String?
-  synthesis      String?
+  summary        String?
   dateGenerate   DateTime
   dateDistribute DateTime?
   status         FicheStatus @default(SUSPENDED)
   name           String
   extension      String
   replacement    String
+  hash           String      @unique
   dumpId         String      @db.Uuid
   dump           Dump        @relation(fields: [dumpId], references: [id])
   uploadId       String      @db.Uuid

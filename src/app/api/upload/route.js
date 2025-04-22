@@ -2,51 +2,42 @@ import { uploadTransaction } from "@/lib/transactions/uploadTransaction";
 import { NextResponse } from "next/server";
 
 export async function POST(request) {
-  const userId = "7bd85074-4668-4b82-a5c9-eb3a8c78b403";
+  const userId = "b60ed9a6-4e75-4149-952a-c0c3d35ac057";
   try {
     const formData = await request.formData();
 
     const uploadType = formData.get("uploadType");
     if (!uploadType) {
-      return NextResponse.json(
-        { data: null, error: { message: "Upload type is missing." } },
-        { status: 400 }
-      );
+      throw new Error("Upload type is missing.");
     }
     if (!["FORM", "FILE", "API"].includes(uploadType)) {
-      return NextResponse.json(
-        { data: null, error: { message: "Upload type is invalid." } },
-        { status: 400 }
-      );
+      throw new Error("Upload type is invalid.");
     }
     if (["FILE", "API"].includes(uploadType)) {
-      const zipFile = formData.get("zipFile");
+      const zipFile = formData.get("file");
       if (!zipFile || typeof zipFile.arrayBuffer !== "function") {
-        return NextResponse.json(
-          {
-            data: null,
-            error: { message: "No file uploaded or file is invalid." },
-          },
-          { status: 400 }
-        );
+        throw new Error("No file uploaded or file is invalid.");
       }
 
-      const { data, error, status } = await uploadTransaction({
+      const { error, status } = await uploadTransaction({
         zipFile,
         uploadType,
         userId,
       });
       if (error) {
-        return NextResponse.json({ data, error }, { status });
+        if (status === 409) {
+          return NextResponse.json({ error }, { status: 409 });
+        }
+        throw new Error(error.message);
       }
-      const uploadId = data.uploadId;
+
+      return NextResponse.json({ error: null }, { status: 200 });
     }
 
-    return NextResponse.json({ data: "Done!", error: null }, { status: 200 });
+    return NextResponse.json({ error: null }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { data: null, error: { message: error.message } },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      error: { message: "Erreur interne du serveur." },
+    });
   }
 }

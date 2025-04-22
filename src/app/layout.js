@@ -1,6 +1,7 @@
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import { AppProvider } from "@/contexts/AppContext";
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata = {
   title: "Home",
@@ -15,6 +16,7 @@ export default function RootLayout({ children }) {
           <Navigation />
           {children}
         </AppProvider>
+        <Toaster />
       </body>
     </html>
   );

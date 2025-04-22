@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 
 import { useApp } from "@/contexts/AppContext";
+import { useToast } from "@/hooks/use-toast";
 
 const FileUpload = () => {
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const router = useRouter();
   const { addPage, returnToPreviousPage } = useApp();
+  const { toast } = useToast();
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -43,30 +45,36 @@ const FileUpload = () => {
   const handleUpload = async () => {
     if (!file) return;
 
-    // uploading logic (to backend)
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "file",
-        file: file,
-      }),
-    }).then((res) => res.json());
+    const formData = new FormData();
+    formData.append("uploadType", "FILE");
+    formData.append("file", file);
 
-    if (response.error) {
-      alert("Erreur lors de l'envoi du file.");
-      return;
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const { error } = await response.json();
+
+      if (error) {
+        toast({
+          title: "Échec du téléversement",
+          description: error.message,
+        });
+        return;
+      }
+      toast({
+        title: "Fichier téléversé",
+        description: "Le fichier a été envoyé avec succès.",
+      });
+      router.push(`/upload`);
+    } catch (error) {
+      toast({
+        title: "Échec du téléversement",
+        description: "Une erreur est survenue lors de l'envoi du fichier.",
+      });
     }
-    const newUploadId = response.data.id;
-    returnToPreviousPage();
-    addPage({
-      name: file.name,
-      path: `/upload/consult/${newUploadId}`,
-      type: "upload",
-    });
-    router.push(`/upload/consult/${newUploadId}`);
   };
 
   return (

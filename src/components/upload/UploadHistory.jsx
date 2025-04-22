@@ -28,11 +28,18 @@ import {
   TooltipProvider,
 } from "../ui/tooltip";
 import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 import { useApp } from "@/contexts/AppContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  runUpload,
+  deleteUpload,
+} from "@/lib/serverActions/handleUploadActions";
 
-const UploadHistory = ({ uploads }) => {
+const UploadHistory = ({ uploadsData }) => {
   const { breadcrumbs, addToBreadcrumbs } = useApp();
+  const [uploads, setUploads] = useState(uploadsData);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (breadcrumbs.length < 2) {
@@ -45,8 +52,80 @@ const UploadHistory = ({ uploads }) => {
 
   if (!uploads) return;
 
-  const handleAction = (action, id) => {
-    // To backend
+  const handleAction = async (action, id) => {
+    switch (action) {
+      case "run":
+        toast({
+          title: "Traitement en cours",
+          description: "Le fichier est en cours de traitement.",
+        });
+        setUploads((prev) =>
+          prev.map((upload) => {
+            if (upload.id === id) {
+              return { ...upload, status: "PROCESSING" };
+            }
+            return upload;
+          })
+        );
+        const status = await runUpload(id);
+        // setUploads((prev) =>
+        //   prev.map((upload) => {
+        //     if (upload.id === id) {
+        //       return processedUpload;
+        //     }
+        //     return upload;
+        //   })
+        // );
+        setUploads((prev) =>
+          prev.map((upload) => {
+            if (upload.id === id) {
+              return { ...upload, status };
+            }
+            return upload;
+          })
+        );
+        break;
+
+      case "download":
+        const request = `/api/download?id=${id}&tableName=upload`;
+        try {
+          const response = await fetch(request);
+          if (!response.ok) {
+            throw new Error();
+          }
+          toast({
+            title: "Téléchargement lancé",
+            description: "Votre fichier est en cours de téléchargement.",
+          });
+          window.location.href = request;
+        } catch {
+          toast({
+            title: "Erreur lors du téléchargement",
+            description:
+              "Impossible de récupérer le fichier. Veuillez réessayer.",
+          });
+        }
+        break;
+
+      case "delete":
+        const isDeleted = await deleteUpload(id);
+        if (isDeleted) {
+          setUploads((prev) => prev.filter((upload) => upload.id !== id));
+          toast({
+            title: "Fichier supprimé",
+            description: "Le fichier a été supprimé avec succès.",
+          });
+        } else {
+          toast({
+            title: "Échec de la suppression",
+            description:
+              "Impossible de supprimer le fichier. Veuillez réessayer.",
+          });
+        }
+        break;
+      default:
+        break;
+    }
   };
 
   const getTypeDisplayName = (type) => {
@@ -117,15 +196,7 @@ const UploadHistory = ({ uploads }) => {
             Historique des téléversements
           </h2>
           <Button asChild>
-            <Link
-              href="/upload/newUpload"
-              onClick={() =>
-                addToBreadcrumbs({
-                  title: "Nouveau téléversement",
-                  href: "/upload/newUpload",
-                })
-              }
-            >
+            <Link href="/upload/newUpload">
               <Plus className="mr-2 h-4 w-4" />
               Nouveau téléversement
             </Link>
@@ -136,14 +207,14 @@ const UploadHistory = ({ uploads }) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Téléversement</TableHead>
-                <TableHead>Utilisateur</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Fiches réussies</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-center w-10">Actions</TableHead>
+                <TableHead className="w-[5%]">#</TableHead>
+                <TableHead className="w-[15%]">Téléversement</TableHead>
+                <TableHead className="w-[13%]">Utilisateur</TableHead>
+                <TableHead className="w-[12%]">Statut</TableHead>
+                <TableHead className="w-[13%]">Fiches réussies</TableHead>
+                <TableHead className="w-[12%]">Type</TableHead>
+                <TableHead className="w-[15%]">Date</TableHead>
+                <TableHead className="text-center w-[15%]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -176,7 +247,7 @@ const UploadHistory = ({ uploads }) => {
                     <TableCell>{getTypeDisplayName(item.type)}</TableCell>
                     <TableCell>{item.date}</TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-end space-x-2">
+                      <div className="flex justify-center space-x-2">
                         {item.status === "PENDING" && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -198,15 +269,7 @@ const UploadHistory = ({ uploads }) => {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button asChild variant="ghost" size="sm">
-                              <Link
-                                href={`/upload/${item.id}`}
-                                onClick={() =>
-                                  addToBreadcrumbs({
-                                    title: item.name,
-                                    href: `/upload/${item.id}`,
-                                  })
-                                }
-                              >
+                              <Link href={`/upload/${item.id}`}>
                                 <Eye className="h-4 w-4" />
                               </Link>
                             </Button>

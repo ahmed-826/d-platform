@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import fs from "fs/promises";
 
 export async function getUploadById(uploadId) {
   return await prisma.upload.findUnique({
@@ -81,4 +82,19 @@ export async function updateUploadById(id, data) {
     where: { id },
     data: { ...data },
   });
+}
+
+export async function deleteUploadById(id) {
+  try {
+    return await prisma.$transaction(async (prisma) => {
+      const upload = await prisma.upload.delete({
+        where: { id },
+      });
+
+      await fs.unlink(upload.path);
+      return true;
+    });
+  } catch {
+    return false;
+  }
 }

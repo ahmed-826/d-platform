@@ -1,16 +1,12 @@
 import UploadHistory from "@/components/upload/UploadHistory";
-
 import { getUploadsByUserId } from "@/lib/services/uploadService";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
-
 const page = async () => {
-  const userId = "1025a3bb-7349-4d5b-ae5f-85d448dbe67f";
+  const userId = "b60ed9a6-4e75-4149-952a-c0c3d35ac057";
 
   const uploads = await getUploadsByUserId(userId);
-
   const formattedUploads = uploads.map((upload) => ({
     id: upload.id,
     name: upload.name,
@@ -20,12 +16,11 @@ const page = async () => {
     }),
     user: upload.user.username,
     type: upload.type,
-    absolutePath: FILE_STORAGE_PATH + upload.path,
     successfulFichesCount: upload.fiches.length,
     totalFichesCount: upload.fiches.length + upload.failedFiches.length,
   }));
 
-  return <UploadHistory uploads={formattedUploads} />;
+  return <UploadHistory uploadsData={formattedUploads} />;
 };
 
 export default page;

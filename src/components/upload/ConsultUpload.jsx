@@ -78,27 +78,52 @@ const ConsultUpload = ({ upload }) => {
     }
   }, [successfulFiches]);
 
-  const handleAction = (action, id) => {
+  const handleAction = async (action, id) => {
     if (id) {
       switch (action) {
         case "consult":
           router.push(`/fiche/${id}`);
+          break;
         case "download":
-          return "Validée";
+          try {
+            const response = await fetch(
+              `/api/download?id=${id}&tableName=fiche`
+            );
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error.message || "An error occurred.");
+            }
+            window.location.href = `/api/download?id=${id}&tableName=upload`;
+          } catch (error) {
+            alert(`Error: ${error.message}`);
+          }
+          break;
         case "report":
-          return "Annulée";
+          break;
         case "delete":
-          return "Annulée";
+          break;
         default:
-          return "Inconnue";
+          break;
       }
     } else {
       // To backend
     }
   };
 
-  const handleDownloadZipFile = () => {
-    // To backend (upload.path) (add FILE_STORAGE_URL)
+  const handleDownloadZipFile = async () => {
+    console.log(upload.id);
+    try {
+      const response = await fetch(
+        `/api/download?id=${upload.id}&tableName=upload`
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error.message || "An error occurred.");
+      }
+      window.location.href = `/api/download?id=${upload.id}&tableName=upload`;
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
   };
 
   const applyPendingChanges = () => {

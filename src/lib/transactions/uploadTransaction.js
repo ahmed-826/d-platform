@@ -21,9 +21,8 @@ export const uploadTransaction = async (data) => {
     const existingUpload = await getUploadByHash(hash);
     if (existingUpload) {
       return {
-        data: null,
-        error: { message: "File is already uploaded." },
-        status: 400,
+        error: { message: "Ce fichier a déjà été ajouté." },
+        status: 409,
       };
     }
 
@@ -32,7 +31,7 @@ export const uploadTransaction = async (data) => {
     const uploadName = `${uploadType}_${formattedDate}`;
     const fileName = zipFile.name;
 
-    const createdUpload = await prisma.$transaction(async (prisma) => {
+    await prisma.$transaction(async (prisma) => {
       let createdUpload;
       try {
         createdUpload = await prisma.upload.create({
@@ -84,12 +83,10 @@ export const uploadTransaction = async (data) => {
           `Failed to write zip file '${fileName}' to the file system.\nCaused by:\n${error.message}`
         );
       }
-
-      return createdUpload;
     });
 
-    return { data: { uploadId: createdUpload.id }, error: null, status: 200 };
+    return { error: null, status: 200 };
   } catch (error) {
-    return { data: null, error: { message: error.message }, status: 500 };
+    return { error: { message: error.message }, status: 500 };
   }
 };

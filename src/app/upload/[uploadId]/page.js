@@ -1,13 +1,12 @@
 import ConsultUpload from "@/components/upload/ConsultUpload";
 
 import { getUploadByIdAndUserId } from "@/lib/services/uploadService";
-import path from "path";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 const page = async ({ params }) => {
   const { uploadId } = params;
-  const userId = "1025a3bb-7349-4d5b-ae5f-85d448dbe67f";
+  const userId = "39a132c3-c027-49c4-a6d4-687a45b69f6f";
 
   const upload = await getUploadByIdAndUserId(uploadId, userId);
 
@@ -19,8 +18,7 @@ const page = async ({ params }) => {
     }),
     username: upload.user.username,
     type: upload.type,
-    fileName: path.basename(upload.path),
-    path: upload.path,
+    fileName: upload.fileName,
     successfulFiches: upload.fiches.map((fiche) => ({
       id: fiche.id,
       ref: fiche.ref,

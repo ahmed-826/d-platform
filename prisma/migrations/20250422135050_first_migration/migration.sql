@@ -82,13 +82,14 @@ CREATE TABLE "Fiche" (
     "id" UUID NOT NULL,
     "ref" TEXT NOT NULL,
     "object" TEXT,
-    "synthesis" TEXT,
+    "summary" TEXT,
     "dateGenerate" TIMESTAMP(3) NOT NULL,
     "dateDistribute" TIMESTAMP(3),
     "status" "FicheStatus" NOT NULL DEFAULT 'SUSPENDED',
     "name" TEXT NOT NULL,
     "extension" TEXT NOT NULL,
     "replacement" TEXT NOT NULL,
+    "hash" TEXT NOT NULL,
     "dumpId" UUID NOT NULL,
     "uploadId" UUID NOT NULL,
 
@@ -152,6 +153,9 @@ CREATE UNIQUE INDEX "Source_name_key" ON "Source"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Dump_name_key" ON "Dump"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Fiche_hash_key" ON "Fiche"("hash");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "FicheRelation_observerId_observedId_key" ON "FicheRelation"("observerId", "observedId");
