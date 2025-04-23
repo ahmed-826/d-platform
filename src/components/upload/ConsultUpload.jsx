@@ -39,6 +39,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/contexts/AppContext";
@@ -46,6 +47,7 @@ import { useApp } from "@/contexts/AppContext";
 const ConsultUpload = ({ upload }) => {
   const router = useRouter();
   const { breadcrumbs, addToBreadcrumbs } = useApp();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (breadcrumbs.length < 2) {
@@ -85,17 +87,23 @@ const ConsultUpload = ({ upload }) => {
           router.push(`/fiche/${id}`);
           break;
         case "download":
+          const request = `/api/download?id=${id}&tableName=fiche`;
           try {
-            const response = await fetch(
-              `/api/download?id=${id}&tableName=fiche`
-            );
+            const response = await fetch(request);
             if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error.message || "An error occurred.");
+              throw new Error();
             }
-            window.location.href = `/api/download?id=${id}&tableName=upload`;
-          } catch (error) {
-            alert(`Error: ${error.message}`);
+            toast({
+              title: "Téléchargement lancé",
+              description: "Votre fiche est en cours de téléchargement.",
+            });
+            window.location.href = request;
+          } catch {
+            toast({
+              title: "Erreur lors du téléchargement",
+              description:
+                "Impossible de récupérer la fiche. Veuillez réessayer.",
+            });
           }
           break;
         case "report":
@@ -198,11 +206,11 @@ const ConsultUpload = ({ upload }) => {
 
   const getStatusDisplayName = (status) => {
     switch (status) {
-      case "SUSPENDED":
+      case "Suspended":
         return "Suspendue";
-      case "VALID":
+      case "Valid":
         return "Validée";
-      case "CANCELED":
+      case "Canceled":
         return "Annulée";
       default:
         return "Inconnue";
@@ -210,11 +218,11 @@ const ConsultUpload = ({ upload }) => {
   };
   const getStatusIcon = (status) => {
     switch (status) {
-      case "SUSPENDED":
+      case "Suspended":
         return <PauseCircle className="h-4 w-4 text-yellow-500" />;
-      case "VALID":
+      case "Valid":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case "CANCELED":
+      case "Canceled":
         return <XCircle className="h-4 w-4 text-red-500" />;
       default:
         return <ShieldQuestion className="h-4 w-4 text-gray-500" />;
@@ -372,21 +380,21 @@ const ConsultUpload = ({ upload }) => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem
-                      onClick={() => handleBulkStatusChange("SUSPENDED")}
+                      onClick={() => handleBulkStatusChange("Suspended")}
                       className="flex items-center cursor-pointer"
                     >
                       <PauseCircle className="mr-2 h-4 w-4 text-yellow-500" />
                       Suspendue
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => handleBulkStatusChange("VALID")}
+                      onClick={() => handleBulkStatusChange("Valid")}
                       className="flex items-center cursor-pointer"
                     >
                       <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
                       Validé
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => handleBulkStatusChange("CANCELED")}
+                      onClick={() => handleBulkStatusChange("Canceled")}
                       className="flex items-center cursor-pointer"
                     >
                       <XCircle className="mr-2 h-4 w-4 text-red-500" />
@@ -515,7 +523,7 @@ const ConsultUpload = ({ upload }) => {
                                 onClick={() =>
                                   handlePendingStatusChange(
                                     fiche.id,
-                                    "SUSPENDED"
+                                    "Suspended"
                                   )
                                 }
                                 className="flex items-center cursor-pointer"
@@ -525,7 +533,7 @@ const ConsultUpload = ({ upload }) => {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handlePendingStatusChange(fiche.id, "VALID")
+                                  handlePendingStatusChange(fiche.id, "Valid")
                                 }
                                 className="flex items-center cursor-pointer"
                               >
@@ -536,7 +544,7 @@ const ConsultUpload = ({ upload }) => {
                                 onClick={() =>
                                   handlePendingStatusChange(
                                     fiche.id,
-                                    "CANCELED"
+                                    "Canceled"
                                   )
                                 }
                                 className="flex items-center cursor-pointer"

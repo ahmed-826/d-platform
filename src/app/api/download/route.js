@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
+import path from "path";
 import { getUploadById } from "@/lib/services/uploadService";
+import { getFicheById } from "@/lib/services/ficheService";
+
+const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
 
   const tableName = searchParams.get("tableName");
   const id = searchParams.get("id");
-
-  console.log("id: ", id);
 
   try {
     if (!tableName || !id) {
@@ -22,6 +24,7 @@ export async function GET(request) {
     if (tableName === "upload") {
       object = await getUploadById(id);
     } else if (tableName === "fiche") {
+      object = await getFicheById(id);
     } else if (tableName === "document") {
     } else if (tableName === "failedFiche") {
     } else {
@@ -37,8 +40,8 @@ export async function GET(request) {
         { status: 404 }
       );
     }
-
-    const filePath = object.path;
+    const filePath = path.join(FILE_STORAGE_PATH, object.path);
+    console.log(filePath);
     if (!filePath || !fs.existsSync(filePath)) {
       return NextResponse.json(
         { data: null, error: { message: "File not found." } },
@@ -47,7 +50,7 @@ export async function GET(request) {
     }
 
     const fileStream = fs.createReadStream(filePath);
-    const fileName = object.fileName;
+    const { base: fileName } = path.parse(object.path);
 
     return new NextResponse(fileStream, {
       headers: {
@@ -56,7 +59,6 @@ export async function GET(request) {
       },
     });
   } catch (error) {
-    console.error("Error in download route:", error);
     return NextResponse.json(
       { data: null, error: { message: "Internal Server Error" } },
       { status: 500 }

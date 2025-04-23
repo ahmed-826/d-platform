@@ -46,7 +46,7 @@ const FileUpload = () => {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append("uploadType", "FILE");
+    formData.append("uploadType", "File");
     formData.append("file", file);
 
     try {

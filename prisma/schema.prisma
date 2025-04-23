@@ -7,63 +7,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// !!! Make sure to create uuid extension in the database: CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 // Enums
 enum UserRole {
-  SUPERADMIN
-  ADMIN
-  USER
+  SuperAdmin
+  Admin
+  User
 }
 
 enum UserStatus {
-  ACTIVE
-  BANNED
-  DELETED
+  Active
+  Banned
+  Deleted
 }
 
 enum UploadType {
-  FORM
-  FILE
+  Form
+  File
   API
 }
 
 enum UploadStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
+  Pending
+  Processing
+  Completed
+  Failed
 }
 
 enum NerCategory {
-  PERSON
-  ORGANIZATION
-  LOCATION
+  Person
+  Organization
+  Location
 }
 
 enum FicheStatus {
-  VALID
-  SUSPENDED
-  CANCELED
+  Valid
+  Suspended
+  Canceled
 }
 
 enum DocumentType {
-  FILE
-  EMAIL
-  ATTACHMENT
+  File
+  Email
+  Attachment
 }
 
 // Models
 model User {
   id        String    @id @default(uuid()) @db.Uuid
   username  String    @unique
-  role      UserRole  @default(USER)
+  role      UserRole  @default(User)
   password  String
   createdAt DateTime  @default(now())
   createdBy String?
-  status    UserStatus @default(ACTIVE)
+  status    UserStatus @default(Active)
 
-  uploads   Upload[]
+  uploads   Upload[] // Do not add onDelete here
 }
 
 model Upload {
@@ -71,15 +69,14 @@ model Upload {
   name      String    
   date      DateTime  @default(now())
   type      UploadType @default(API)
-  status    UploadStatus @default(PENDING)
+  status    UploadStatus @default(Pending)
   path      String?
   hash      String   @unique
-  fileName  String?
   userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Add onDelete here
   
-  fiches    Fiche[]
-  failedFiches FailedFiche[]
+  fiches        Fiche[]          // Do not add onDelete here
+  failedFiches  FailedFiche[]    // Do not add onDelete here
 }
 
 model Source {
@@ -87,19 +84,19 @@ model Source {
   name        String   @unique
   description String?
 
-  dumps       Dump[]
+  dumps       Dump[]   // Do not add onDelete here
 }
 
 model Dump {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @unique
-  dateCollect DateTime?
-  description String?
-  sourceId    String   @db.Uuid
-  source      Source   @relation(fields: [sourceId], references: [id])
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @unique
+  dateCollect   DateTime?
+  description   String?
+  sourceId      String   @db.Uuid
+  source        Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade) // Add onDelete here
 
-  fiches      Fiche[]
-  failedFiches FailedFiche[]
+  fiches        Fiche[]          // Do not add onDelete here
+  failedFiches  FailedFiche[]    // Do not add onDelete here
 }
 
 model Ner {
@@ -108,7 +105,7 @@ model Ner {
   category    NerCategory
   description String?
 
-  fichesNers  FicheNer[]
+  fichesNers  FicheNer[] // Do not add onDelete here
 }
 
 model Fiche {
@@ -116,22 +113,20 @@ model Fiche {
   ref            String
   object         String?
   summary        String?
-  dateGenerate   DateTime
+  dateGenerate   DateTime     @default(now())
   dateDistribute DateTime?
-  status         FicheStatus @default(SUSPENDED)
-  name           String
-  extension      String
-  replacement    String
-  hash           String      @unique
-  dumpId         String      @db.Uuid
-  dump           Dump        @relation(fields: [dumpId], references: [id])
-  uploadId       String      @db.Uuid
-  upload         Upload      @relation(fields: [uploadId], references: [id])
+  status         FicheStatus  @default(Suspended)
+  path           String
+  hash           String        @unique
+  dumpId         String        @db.Uuid
+  dump           Dump          @relation(fields: [dumpId], references: [id], onDelete: Cascade) // Add onDelete here
+  uploadId       String        @db.Uuid
+  upload         Upload      @relation(fields: [uploadId], references: [id], onDelete: Cascade) // Add onDelete here
 
-  documents      Document[]
-  ficheNers      FicheNer[]
-  observations   FicheRelation[] @relation("FicheObservations")
-  observedBy     FicheRelation[] @relation("FicheObservedBy")
+  documents      Document[]    // Do not add onDelete here
+  ficheNers      FicheNer[]    // Do not add onDelete here
+  observations   FicheRelation[] @relation("FicheObservations") // Do not add onDelete here
+  observedBy     FicheRelation[] @relation("FicheObservedBy")   // Do not add onDelete here
 }
 
 model FicheRelation {
@@ -139,8 +134,8 @@ model FicheRelation {
   observerId    String   @db.Uuid
   observedId    String   @db.Uuid
 
-  observer      Fiche    @relation("FicheObservedBy", fields: [observerId], references: [id])
-  observed      Fiche    @relation("FicheObservations", fields: [observedId], references: [id])
+  observer      Fiche    @relation("FicheObservedBy", fields: [observerId], references: [id], onDelete: Cascade) // Add onDelete here
+  observed      Fiche    @relation("FicheObservations", fields: [observedId], references: [id], onDelete: Cascade) // Add onDelete here
 
   @@unique([observerId, observedId])
 }
@@ -148,9 +143,9 @@ model FicheRelation {
 model FicheNer {
   id          String   @id @default(uuid()) @db.Uuid
   ficheId     String   @db.Uuid
-  fiche       Fiche    @relation(fields: [ficheId], references: [id])
+  fiche       Fiche    @relation(fields: [ficheId], references: [id], onDelete: Cascade) // Add onDelete here
   nerId       String   @db.Uuid
-  ner         Ner      @relation(fields: [nerId], references: [id])
+  ner         Ner      @relation(fields: [nerId], references: [id], onDelete: Cascade) // Add onDelete here
   description String?
 
   @@unique([ficheId, nerId])
@@ -158,24 +153,23 @@ model FicheNer {
 
 model Document {
   id           String       @id @default(uuid()) @db.Uuid
-  name         String
-  type         DocumentType?
+  type         DocumentType
   content      String?
   meta         Json?
-  extension    String
-  replacement  String
+  path         String
+  rpPath       String?
   hash         String       @unique
-  ficheId      String?      @db.Uuid
-  fiche        Fiche?       @relation(fields: [ficheId], references: [id])
+  ficheId      String      @db.Uuid
+  fiche        Fiche       @relation(fields: [ficheId], references: [id], onDelete: Cascade) // Add onDelete here
 }
 
 model FailedFiche {
   id           String   @id @default(uuid()) @db.Uuid
   dateGenerate DateTime?
   dumpId       String?  @db.Uuid
-  dump         Dump?    @relation(fields: [dumpId], references: [id])
+  dump         Dump?    @relation(fields: [dumpId], references: [id], onDelete: Cascade) // Add onDelete here
   uploadId     String   @db.Uuid
-  upload       Upload   @relation(fields: [uploadId], references: [id])
+  upload       Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade) // Add onDelete here
   path         String?
-  message      String  
+  message      String?  
 }

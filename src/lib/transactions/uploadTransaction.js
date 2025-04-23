@@ -53,8 +53,8 @@ export const uploadTransaction = async (data) => {
       }
 
       const uploadId = createdUpload.id;
-      const targetPath = path.join(
-        FILE_STORAGE_PATH,
+      const uploadPath = path.join(
+        "data",
         "upload",
         formattedDate,
         `${uploadId}_${fileName}`
@@ -62,7 +62,7 @@ export const uploadTransaction = async (data) => {
       try {
         const updatedUpload = await prisma.upload.update({
           where: { id: uploadId },
-          data: { path: targetPath, fileName: fileName },
+          data: { path: uploadPath, fileName: fileName },
         });
         if (!updatedUpload || !updatedUpload.id) {
           throw new Error("Upload was created, but no data was returned.");
@@ -74,6 +74,7 @@ export const uploadTransaction = async (data) => {
       }
 
       try {
+        const targetPath = path.join(FILE_STORAGE_PATH, uploadPath);
         const dirPath = path.dirname(targetPath);
         await fs.mkdir(dirPath, { recursive: true });
 

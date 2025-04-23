@@ -1,9 +1,7 @@
 import prisma from "@/lib/db";
 
 export async function getDumpByName(name) {
-  return await prisma.dump.findUnique({
-    where: { name },
-  });
+  return await prisma.dump.findUnique({ where: { name } });
 }
 
 export async function createDump(data) {

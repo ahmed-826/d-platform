@@ -6,7 +6,7 @@ import { fr } from "date-fns/locale";
 
 const page = async ({ params }) => {
   const { uploadId } = params;
-  const userId = "39a132c3-c027-49c4-a6d4-687a45b69f6f";
+  const userId = "8e60d485-9a29-4156-bcf9-9066ca673571";
 
   const upload = await getUploadByIdAndUserId(uploadId, userId);
 

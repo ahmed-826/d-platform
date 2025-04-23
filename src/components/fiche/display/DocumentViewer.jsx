@@ -50,10 +50,12 @@ const DocumentViewer = ({ document, withNavigate = false }) => {
 
   const renderViewer = (extension) => {
     switch (extension) {
-      case "pdf":
+      case ".pdf":
         return <PDFViewer path={document.path} />;
-      case "docx":
-      case "xlsx":
+      case ".docx":
+        break;
+      case ".xlsx":
+        break;
       default:
         return <ExtensionNotSupportedViewer />;
     }

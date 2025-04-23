@@ -4,6 +4,8 @@ import { FicheProvider } from "@/contexts/FicheContext";
 import { getFicheById } from "@/lib/services/ficheService";
 import path from "path";
 
+const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
+
 const page = async ({ params }) => {
   const { ficheId } = params;
 
@@ -12,7 +14,7 @@ const page = async ({ params }) => {
   const formattedFiche = {
     id: fiche.id,
     name: fiche.name,
-    path: path.join(fiche.replacement, `${fiche.name}.${fiche.extension}`),
+    path: path.join(FILE_STORAGE_PATH, fiche.path),
     extension: fiche.extension,
     docType: "fiche",
 
@@ -24,7 +26,7 @@ const page = async ({ params }) => {
   const sourceDocuments = fiche.documents.map((doc) => ({
     id: doc.id,
     name: doc.name,
-    path: path.join(doc.replacement, `${doc.name}.${doc.extension}`),
+    path: path.join(FILE_STORAGE_PATH, doc.path),
     extension: doc.extension,
 
     docType: "source",
@@ -32,10 +34,7 @@ const page = async ({ params }) => {
   const observations = fiche.observations.map((obs) => ({
     id: obs.observer.id,
     name: obs.observer.name,
-    path: path.join(
-      obs.observer.replacement,
-      `${obs.observer.name}.${obs.observer.extension}`
-    ),
+    path: path.join(FILE_STORAGE_PATH, obs.path),
     extension: obs.observer.extension,
 
     ref: obs.observer.ref,

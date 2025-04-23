@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// !!! Make sure to create uuid extension in the database: CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+// Enums
+enum UserRole {
+  SuperAdmin
+  Admin
+  User
+}
+
+enum UserStatus {
+  Active
+  Banned
+  Deleted
+}
+
+enum UploadType {
+  Form
+  File
+  API
+}
+
+enum UploadStatus {
+  Pending
+  Processing
+  Completed
+  Failed
+}
+
+enum NerCategory {
+  Person
+  Organization
+  Location
+}
+
+enum FicheStatus {
+  Valid
+  Suspended
+  Canceled
+}
+
+enum DocumentType {
+  File
+  Email
+  Attachment
+}
+
+
+// Models
+model User {
+  id        String    @id @default(uuid()) @db.Uuid
+  username  String    @unique
+  role      UserRole  @default(User)
+  password  String
+  createdAt DateTime  @default(now())
+  createdBy String?
+  status    UserStatus @default(Active)
+
+  uploads   Upload[]
+}
+
+model Upload {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    
+  date      DateTime  @default(now())
+  type      UploadType @default(API)
+  status    UploadStatus @default(Pending)
+  path      String?
+  hash      String   @unique
+  fileName  String?
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  
+  fiches    Fiche[]
+  failedFiches FailedFiche[]
+}
+
+model Source {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+
+  dumps       Dump[]
+}
+
+model Dump {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  dateCollect DateTime?
+  description String?
+  sourceId    String   @db.Uuid
+  source      Source   @relation(fields: [sourceId], references: [id])
+
+  fiches      Fiche[]
+  failedFiches FailedFiche[]
+}
+
+model Ner {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  category    NerCategory
+  description String?
+
+  fichesNers  FicheNer[]
+}
+
+model Fiche {
+  id             String       @id @default(uuid()) @db.Uuid
+  ref            String
+  object         String?
+  summary        String?
+  dateGenerate   DateTime
+  dateDistribute DateTime?
+  status         FicheStatus @default(Suspended)
+  name           String
+  extension      String
+  replacement    String
+  hash           String      @unique
+  dumpId         String      @db.Uuid
+  dump           Dump        @relation(fields: [dumpId], references: [id])
+  uploadId       String      @db.Uuid
+  upload         Upload      @relation(fields: [uploadId], references: [id])
+
+  documents      Document[]
+  ficheNers      FicheNer[]
+  observations   FicheRelation[] @relation("FicheObservations")
+  observedBy     FicheRelation[] @relation("FicheObservedBy")
+}
+
+model FicheRelation {
+  id            String   @id @default(uuid()) @db.Uuid
+  observerId    String   @db.Uuid
+  observedId    String   @db.Uuid
+
+  observer      Fiche    @relation("FicheObservedBy", fields: [observerId], references: [id])
+  observed      Fiche    @relation("FicheObservations", fields: [observedId], references: [id])
+
+  @@unique([observerId, observedId])
+}
+
+model FicheNer {
+  id          String   @id @default(uuid()) @db.Uuid
+  ficheId     String   @db.Uuid
+  fiche       Fiche    @relation(fields: [ficheId], references: [id])
+  nerId       String   @db.Uuid
+  ner         Ner      @relation(fields: [nerId], references: [id])
+  description String?
+
+  @@unique([ficheId, nerId])
+}
+
+model Document {
+  id           String       @id @default(uuid()) @db.Uuid
+  name         String
+  type         DocumentType?
+  content      String?
+  meta         Json?
+  extension    String
+  replacement  String
+  hash         String       @unique
+  ficheId      String?      @db.Uuid
+  fiche        Fiche?       @relation(fields: [ficheId], references: [id])
+}
+
+model FailedFiche {
+  id           String   @id @default(uuid()) @db.Uuid
+  dateGenerate DateTime?
+  dumpId       String?  @db.Uuid
+  dump         Dump?    @relation(fields: [dumpId], references: [id])
+  uploadId     String   @db.Uuid
+  upload       Upload   @relation(fields: [uploadId], references: [id])
+  path         String?
+  message      String  
+}

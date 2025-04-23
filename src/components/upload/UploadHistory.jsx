@@ -31,12 +31,11 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useApp } from "@/contexts/AppContext";
 import { useEffect, useState } from "react";
-import {
-  runUpload,
-  deleteUpload,
-} from "@/lib/serverActions/handleUploadActions";
+import { useRouter } from "next/navigation";
+import { runUpload, deleteUpload } from "@/lib/serverActions/uploadActions";
 
 const UploadHistory = ({ uploadsData }) => {
+  const router = useRouter();
   const { breadcrumbs, addToBreadcrumbs } = useApp();
   const [uploads, setUploads] = useState(uploadsData);
   const { toast } = useToast();
@@ -54,6 +53,9 @@ const UploadHistory = ({ uploadsData }) => {
 
   const handleAction = async (action, id) => {
     switch (action) {
+      case "consult":
+        router.push(`/upload/${id}`);
+        break;
       case "run":
         toast({
           title: "Traitement en cours",
@@ -62,24 +64,16 @@ const UploadHistory = ({ uploadsData }) => {
         setUploads((prev) =>
           prev.map((upload) => {
             if (upload.id === id) {
-              return { ...upload, status: "PROCESSING" };
+              return { ...upload, status: "Processing" };
             }
             return upload;
           })
         );
-        const status = await runUpload(id);
-        // setUploads((prev) =>
-        //   prev.map((upload) => {
-        //     if (upload.id === id) {
-        //       return processedUpload;
-        //     }
-        //     return upload;
-        //   })
-        // );
+        const processedUpload = await runUpload(id);
         setUploads((prev) =>
           prev.map((upload) => {
             if (upload.id === id) {
-              return { ...upload, status };
+              return processedUpload;
             }
             return upload;
           })
@@ -130,9 +124,9 @@ const UploadHistory = ({ uploadsData }) => {
 
   const getTypeDisplayName = (type) => {
     switch (type) {
-      case "FORM":
+      case "Form":
         return "Formulaire";
-      case "FILE":
+      case "File":
         return "Fichier";
       case "API":
         return "API";
@@ -143,7 +137,7 @@ const UploadHistory = ({ uploadsData }) => {
 
   const renderStatusBadge = (status) => {
     switch (status) {
-      case "PENDING":
+      case "Pending":
         return (
           <Badge
             variant="outline"
@@ -153,7 +147,7 @@ const UploadHistory = ({ uploadsData }) => {
             En attente
           </Badge>
         );
-      case "PROCESSING":
+      case "Processing":
         return (
           <Badge
             variant="outline"
@@ -163,7 +157,7 @@ const UploadHistory = ({ uploadsData }) => {
             En cours
           </Badge>
         );
-      case "COMPLETED":
+      case "Completed":
         return (
           <Badge
             variant="outline"
@@ -173,7 +167,7 @@ const UploadHistory = ({ uploadsData }) => {
             Terminé
           </Badge>
         );
-      case "FAILED":
+      case "Failed":
         return (
           <Badge
             variant="outline"
@@ -248,7 +242,7 @@ const UploadHistory = ({ uploadsData }) => {
                     <TableCell>{item.date}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center space-x-2">
-                        {item.status === "PENDING" && (
+                        {item.status === "Pending" && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
@@ -268,10 +262,12 @@ const UploadHistory = ({ uploadsData }) => {
 
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button asChild variant="ghost" size="sm">
-                              <Link href={`/upload/${item.id}`}>
-                                <Eye className="h-4 w-4" />
-                              </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleAction("consult", item.id)}
+                            >
+                              <Eye className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>

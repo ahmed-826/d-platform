@@ -81,20 +81,18 @@ export async function updateUploadById(id, data) {
   return await prisma.upload.update({
     where: { id },
     data: { ...data },
+    include: {
+      user: true,
+      fiches: {
+        include: {
+          dump: {
+            include: {
+              source: true,
+            },
+          },
+        },
+      },
+      failedFiches: true,
+    },
   });
-}
-
-export async function deleteUploadById(id) {
-  try {
-    return await prisma.$transaction(async (prisma) => {
-      const upload = await prisma.upload.delete({
-        where: { id },
-      });
-
-      await fs.unlink(upload.path);
-      return true;
-    });
-  } catch {
-    return false;
-  }
 }

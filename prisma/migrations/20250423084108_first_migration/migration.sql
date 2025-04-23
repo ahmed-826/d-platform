@@ -1,33 +1,33 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('SUPERADMIN', 'ADMIN', 'USER');
+CREATE TYPE "UserRole" AS ENUM ('SuperAdmin', 'Admin', 'User');
 
 -- CreateEnum
-CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'BANNED', 'DELETED');
+CREATE TYPE "UserStatus" AS ENUM ('Active', 'Banned', 'Deleted');
 
 -- CreateEnum
-CREATE TYPE "UploadType" AS ENUM ('FORM', 'FILE', 'API');
+CREATE TYPE "UploadType" AS ENUM ('Form', 'File', 'API');
 
 -- CreateEnum
-CREATE TYPE "UploadStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED');
+CREATE TYPE "UploadStatus" AS ENUM ('Pending', 'Processing', 'Completed', 'Failed');
 
 -- CreateEnum
-CREATE TYPE "NerCategory" AS ENUM ('PERSON', 'ORGANIZATION', 'LOCATION');
+CREATE TYPE "NerCategory" AS ENUM ('Person', 'Organization', 'Location');
 
 -- CreateEnum
-CREATE TYPE "FicheStatus" AS ENUM ('VALID', 'SUSPENDED', 'CANCELED');
+CREATE TYPE "FicheStatus" AS ENUM ('Valid', 'Suspended', 'Canceled');
 
 -- CreateEnum
-CREATE TYPE "DocumentType" AS ENUM ('FILE', 'EMAIL', 'ATTACHMENT');
+CREATE TYPE "DocumentType" AS ENUM ('File', 'Email', 'Attachment');
 
 -- CreateTable
 CREATE TABLE "User" (
     "id" UUID NOT NULL,
     "username" TEXT NOT NULL,
-    "role" "UserRole" NOT NULL DEFAULT 'USER',
+    "role" "UserRole" NOT NULL DEFAULT 'User',
     "password" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdBy" TEXT,
-    "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
+    "status" "UserStatus" NOT NULL DEFAULT 'Active',
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -38,7 +38,7 @@ CREATE TABLE "Upload" (
     "name" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "type" "UploadType" NOT NULL DEFAULT 'API',
-    "status" "UploadStatus" NOT NULL DEFAULT 'PENDING',
+    "status" "UploadStatus" NOT NULL DEFAULT 'Pending',
     "path" TEXT,
     "hash" TEXT NOT NULL,
     "fileName" TEXT,
@@ -85,7 +85,7 @@ CREATE TABLE "Fiche" (
     "summary" TEXT,
     "dateGenerate" TIMESTAMP(3) NOT NULL,
     "dateDistribute" TIMESTAMP(3),
-    "status" "FicheStatus" NOT NULL DEFAULT 'SUSPENDED',
+    "status" "FicheStatus" NOT NULL DEFAULT 'Suspended',
     "name" TEXT NOT NULL,
     "extension" TEXT NOT NULL,
     "replacement" TEXT NOT NULL,
@@ -167,34 +167,34 @@ CREATE UNIQUE INDEX "FicheNer_ficheId_nerId_key" ON "FicheNer"("ficheId", "nerId
 CREATE UNIQUE INDEX "Document_hash_key" ON "Document"("hash");
 
 -- AddForeignKey
-ALTER TABLE "Upload" ADD CONSTRAINT "Upload_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Upload" ADD CONSTRAINT "Upload_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Dump" ADD CONSTRAINT "Dump_sourceId_fkey" FOREIGN KEY ("sourceId") REFERENCES "Source"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Dump" ADD CONSTRAINT "Dump_sourceId_fkey" FOREIGN KEY ("sourceId") REFERENCES "Source"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Fiche" ADD CONSTRAINT "Fiche_dumpId_fkey" FOREIGN KEY ("dumpId") REFERENCES "Dump"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Fiche" ADD CONSTRAINT "Fiche_dumpId_fkey" FOREIGN KEY ("dumpId") REFERENCES "Dump"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Fiche" ADD CONSTRAINT "Fiche_uploadId_fkey" FOREIGN KEY ("uploadId") REFERENCES "Upload"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Fiche" ADD CONSTRAINT "Fiche_uploadId_fkey" FOREIGN KEY ("uploadId") REFERENCES "Upload"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FicheRelation" ADD CONSTRAINT "FicheRelation_observerId_fkey" FOREIGN KEY ("observerId") REFERENCES "Fiche"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "FicheRelation" ADD CONSTRAINT "FicheRelation_observerId_fkey" FOREIGN KEY ("observerId") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FicheRelation" ADD CONSTRAINT "FicheRelation_observedId_fkey" FOREIGN KEY ("observedId") REFERENCES "Fiche"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "FicheRelation" ADD CONSTRAINT "FicheRelation_observedId_fkey" FOREIGN KEY ("observedId") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FicheNer" ADD CONSTRAINT "FicheNer_ficheId_fkey" FOREIGN KEY ("ficheId") REFERENCES "Fiche"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "FicheNer" ADD CONSTRAINT "FicheNer_ficheId_fkey" FOREIGN KEY ("ficheId") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FicheNer" ADD CONSTRAINT "FicheNer_nerId_fkey" FOREIGN KEY ("nerId") REFERENCES "Ner"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "FicheNer" ADD CONSTRAINT "FicheNer_nerId_fkey" FOREIGN KEY ("nerId") REFERENCES "Ner"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_ficheId_fkey" FOREIGN KEY ("ficheId") REFERENCES "Fiche"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Document" ADD CONSTRAINT "Document_ficheId_fkey" FOREIGN KEY ("ficheId") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FailedFiche" ADD CONSTRAINT "FailedFiche_dumpId_fkey" FOREIGN KEY ("dumpId") REFERENCES "Dump"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "FailedFiche" ADD CONSTRAINT "FailedFiche_dumpId_fkey" FOREIGN KEY ("dumpId") REFERENCES "Dump"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FailedFiche" ADD CONSTRAINT "FailedFiche_uploadId_fkey" FOREIGN KEY ("uploadId") REFERENCES "Upload"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "FailedFiche" ADD CONSTRAINT "FailedFiche_uploadId_fkey" FOREIGN KEY ("uploadId") REFERENCES "Upload"("id") ON DELETE CASCADE ON UPDATE CASCADE;
