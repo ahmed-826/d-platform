@@ -71,6 +71,7 @@ model Upload {
   type      UploadType @default(API)
   status    UploadStatus @default(Pending)
   path      String?
+  fileName  String?
   hash      String   @unique
   userId    String   @db.Uuid
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Add onDelete here

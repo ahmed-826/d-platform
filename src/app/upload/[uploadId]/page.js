@@ -1,12 +1,14 @@
 import ConsultUpload from "@/components/upload/ConsultUpload";
-
 import { getUploadByIdAndUserId } from "@/lib/services/uploadService";
+import path from "path";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
+const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
+
 const page = async ({ params }) => {
   const { uploadId } = params;
-  const userId = "8e60d485-9a29-4156-bcf9-9066ca673571";
+  const userId = "a59cd394-5f14-42e0-b559-e6f9e0fee105";
 
   const upload = await getUploadByIdAndUserId(uploadId, userId);
 
@@ -19,12 +21,14 @@ const page = async ({ params }) => {
     username: upload.user.username,
     type: upload.type,
     fileName: upload.fileName,
+    path: path.join(FILE_STORAGE_PATH, upload.path),
     successfulFiches: upload.fiches.map((fiche) => ({
       id: fiche.id,
       ref: fiche.ref,
       source: fiche.dump.source.name,
       uploadStatus: { status: "successful", message: "Upload successful" },
       status: fiche.status,
+      path: path.join(FILE_STORAGE_PATH, fiche.path),
     })),
     failedFiches: upload.failedFiches.map((fiche) => ({
       id: fiche.id,
@@ -35,7 +39,6 @@ const page = async ({ params }) => {
     successfulFichesCount: upload.fiches.length,
     totalFichesCount: upload.fiches.length + upload.failedFiches.length,
   };
-
   return <ConsultUpload upload={formattedUpload} />;
 };
 

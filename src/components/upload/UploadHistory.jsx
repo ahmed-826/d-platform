@@ -31,17 +31,15 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useApp } from "@/contexts/AppContext";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { runUpload, deleteUpload } from "@/lib/serverActions/uploadActions";
 
 const UploadHistory = ({ uploadsData }) => {
-  const router = useRouter();
   const { breadcrumbs, addToBreadcrumbs } = useApp();
   const [uploads, setUploads] = useState(uploadsData);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (breadcrumbs.length < 2) {
+    if (breadcrumbs[breadcrumbs.length - 1].title !== "Téléversements") {
       addToBreadcrumbs({
         title: "Téléversements",
         href: "/upload",
@@ -51,74 +49,63 @@ const UploadHistory = ({ uploadsData }) => {
 
   if (!uploads) return;
 
-  const handleAction = async (action, id) => {
-    switch (action) {
-      case "consult":
-        router.push(`/upload/${id}`);
-        break;
-      case "run":
-        toast({
-          title: "Traitement en cours",
-          description: "Le fichier est en cours de traitement.",
-        });
-        setUploads((prev) =>
-          prev.map((upload) => {
-            if (upload.id === id) {
-              return { ...upload, status: "Processing" };
-            }
-            return upload;
-          })
-        );
-        const processedUpload = await runUpload(id);
-        setUploads((prev) =>
-          prev.map((upload) => {
-            if (upload.id === id) {
-              return processedUpload;
-            }
-            return upload;
-          })
-        );
-        break;
-
-      case "download":
-        const request = `/api/download?id=${id}&tableName=upload`;
-        try {
-          const response = await fetch(request);
-          if (!response.ok) {
-            throw new Error();
-          }
-          toast({
-            title: "Téléchargement lancé",
-            description: "Votre fichier est en cours de téléchargement.",
-          });
-          window.location.href = request;
-        } catch {
-          toast({
-            title: "Erreur lors du téléchargement",
-            description:
-              "Impossible de récupérer le fichier. Veuillez réessayer.",
-          });
+  const handleRun = async (id) => {
+    toast({
+      title: "Traitement en cours",
+      description: "Le fichier est en cours de traitement.",
+    });
+    setUploads((prev) =>
+      prev.map((upload) => {
+        if (upload.id === id) {
+          return { ...upload, status: "Processing" };
         }
-        break;
-
-      case "delete":
-        const isDeleted = await deleteUpload(id);
-        if (isDeleted) {
-          setUploads((prev) => prev.filter((upload) => upload.id !== id));
-          toast({
-            title: "Fichier supprimé",
-            description: "Le fichier a été supprimé avec succès.",
-          });
-        } else {
-          toast({
-            title: "Échec de la suppression",
-            description:
-              "Impossible de supprimer le fichier. Veuillez réessayer.",
-          });
+        return upload;
+      })
+    );
+    const processedUpload = await runUpload(id);
+    setUploads((prev) =>
+      prev.map((upload) => {
+        if (upload.id === id) {
+          return processedUpload;
         }
-        break;
-      default:
-        break;
+        return upload;
+      })
+    );
+  };
+
+  const handleDownload = async (path, fileName) => {
+    const request = `/api/download?filePath=${path}&fileName=${fileName}`;
+    try {
+      const response = await fetch(request);
+      if (!response.ok) {
+        throw new Error();
+      }
+      toast({
+        title: "Téléchargement lancé",
+        description: "Votre fichier est en cours de téléchargement.",
+      });
+      window.location.href = request;
+    } catch {
+      toast({
+        title: "Erreur lors du téléchargement",
+        description: "Impossible de récupérer le fichier. Veuillez réessayer.",
+      });
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const isDeleted = await deleteUpload(id);
+    if (isDeleted) {
+      setUploads((prev) => prev.filter((upload) => upload.id !== id));
+      toast({
+        title: "Fichier supprimé",
+        description: "Le fichier a été supprimé avec succès.",
+      });
+    } else {
+      toast({
+        title: "Échec de la suppression",
+        description: "Impossible de supprimer le fichier. Veuillez réessayer.",
+      });
     }
   };
 
@@ -222,33 +209,33 @@ const UploadHistory = ({ uploadsData }) => {
                   </TableCell>
                 </TableRow>
               ) : (
-                uploads.map((item, index) => (
-                  <TableRow key={item.id}>
+                uploads.map((upload, index) => (
+                  <TableRow key={upload.id}>
                     <TableCell>{index + 1}</TableCell>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.user}</TableCell>
+                    <TableCell className="font-medium">{upload.name}</TableCell>
+                    <TableCell>{upload.user}</TableCell>
 
                     <TableCell>
                       <div className="flex">
-                        {renderStatusBadge(item.status)}
+                        {renderStatusBadge(upload.status)}
                       </div>
                     </TableCell>
                     <TableCell>
                       <span className="px-2 py-1 bg-blue-50 text-blue-800 rounded-md font-medium">
-                        {item.successfulFichesCount}/{item.totalFichesCount}
+                        {upload.successfulFichesCount}/{upload.totalFichesCount}
                       </span>
                     </TableCell>
-                    <TableCell>{getTypeDisplayName(item.type)}</TableCell>
-                    <TableCell>{item.date}</TableCell>
+                    <TableCell>{getTypeDisplayName(upload.type)}</TableCell>
+                    <TableCell>{upload.date}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center space-x-2">
-                        {item.status === "Pending" && (
+                        {upload.status === "Pending" && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleAction("run", item.id)}
+                                onClick={() => handleRun(upload.id)}
                                 className="text-green-600 hover:text-green-800"
                               >
                                 <Play className="h-4 w-4" />
@@ -262,24 +249,25 @@ const UploadHistory = ({ uploadsData }) => {
 
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleAction("consult", item.id)}
-                            >
-                              <Eye className="h-4 w-4" />
+                            <Button asChild variant="ghost" size="sm">
+                              <Link href={`/upload/${upload.id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Consulter</p>
                           </TooltipContent>
                         </Tooltip>
+
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleAction("download", item.id)}
+                              onClick={() =>
+                                handleDownload(upload.path, upload.fileName)
+                              }
                             >
                               <Download className="h-4 w-4" />
                             </Button>
@@ -288,12 +276,13 @@ const UploadHistory = ({ uploadsData }) => {
                             <p>Télécharger</p>
                           </TooltipContent>
                         </Tooltip>
+
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleAction("delete", item.id)}
+                              onClick={() => handleDelete(upload.id)}
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>

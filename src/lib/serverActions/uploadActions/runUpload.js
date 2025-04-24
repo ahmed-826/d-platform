@@ -50,57 +50,65 @@ const getAndUploadProductsFromZipFile = async (fileData, uploadId) => {
     const fileNames = Object.keys(zip.files).filter(
       (fileName) => !zip.files[fileName].dir
     );
-    const folders = Object.keys(zip.files).filter(
-      (fileName) => zip.files[fileName].dir
-    );
-    folders.push("./");
-
+    const folders = [...new Set(Object.keys(zip.files).map(path.dirname))];
     for (const folder of folders) {
       try {
         const fileNamesInFolder = fileNames.filter(
           (fileName) => !path.relative(folder, fileName).includes(path.sep)
         );
-        const jsonName = fileNamesInFolder.find((fileName) =>
-          fileName.endsWith("data.json")
-        );
-        const ficheName = fileNamesInFolder.find((fileName) =>
-          isFiche(fileName)
-        );
-        const documentsNames = fileNamesInFolder.filter(
-          (fileName) => isDocument(fileName) && fileName !== ficheName
-        );
-        const zipFileNames = fileNamesInFolder.filter((fileName) =>
-          fileName.endsWith(".zip")
-        );
 
-        if (jsonName && ficheName && documentsNames.length > 0) {
-          const jsonData = await zip.file(jsonName).async("string");
-          const ficheFile = await zip.file(ficheName).async("arraybuffer");
-          const documentFiles = documentsNames.map(
-            async (fileName) => await zip.file(fileName).async("arraybuffer")
+        try {
+          const jsonName = fileNamesInFolder.find((fileName) =>
+            fileName.endsWith("data.json")
+          );
+          const ficheName = fileNamesInFolder.find((fileName) =>
+            isFiche(fileName)
+          );
+          const documentsNames = fileNamesInFolder.filter(
+            (fileName) => isDocument(fileName) && fileName !== ficheName
+          );
+          if (jsonName && ficheName && documentsNames.length > 0) {
+            const jsonData = await zip.file(jsonName).async("string");
+            const ficheFile = Buffer.from(
+              await zip.file(ficheName).async("arraybuffer")
+            );
+            const documentFiles = await Promise.all(
+              documentsNames.map(async (fileName) =>
+                Buffer.from(await zip.file(fileName).async("arraybuffer"))
+              )
+            );
+            const { error } = await productTransaction({
+              jsonData,
+              ficheFile,
+              ficheName,
+              documentFiles,
+              uploadId,
+            });
+            if (error) {
+              console.log("Error(FailedFiche): ", error.message);
+              //  await insertFailedFiche({ jsonData, ficheFile, documentFiles });
+            }
+          } else {
+            //continue;
+          }
+        } catch (error) {
+          console.log("Error in Fiche:", error.message);
+        }
+
+        try {
+          const zipFileNames = fileNamesInFolder.filter((fileName) =>
+            fileName.endsWith(".zip")
           );
 
-          const { error } = await productTransaction({
-            jsonData,
-            ficheFile,
-            ficheName,
-            documentFiles,
-            uploadId,
-          });
-          if (error) {
-            console.log("Error", error.message);
-            //  await insertFailedFiche({ jsonData, ficheFile, documentFiles });
+          const zipFiles = await Promise.all(
+            zipFileNames.map(
+              async (fileName) => await zip.file(fileName).async("arraybuffer")
+            )
+          );
+          for (const zipFile of zipFiles) {
+            await getAndUploadProductsFromZipFile(zipFile, uploadId);
           }
-        } else {
-          continue;
-        }
-
-        const zipFiles = zipFileNames.map(
-          async (fileName) => await zip.file(fileName).async("arraybuffer")
-        );
-        for (const zipFile of zipFiles) {
-          await getAndUploadProductsFromZipFile(zipFile, uploadId);
-        }
+        } catch {}
       } catch {}
     }
 
@@ -140,7 +148,6 @@ const productTransaction = async (data) => {
           "Le nombre de documents source ne correspond pas au nombre de documents dans data.json."
         );
       }
-
       if (!sourceName) {
         throw new Error("La source est manquant dans data.json.");
       }
@@ -186,7 +193,7 @@ const productTransaction = async (data) => {
         name
       );
       const fichePath = path.join(replacement, ficheBaseName);
-      const hash = calculateFileHash(Buffer.from(ficheFile));
+      const hash = calculateFileHash(ficheFile);
       const existFiche = await prisma.fiche.findUnique({ where: { hash } });
       if (existFiche) {
         throw new Error("La fiche existe déjà.");
@@ -217,9 +224,7 @@ const productTransaction = async (data) => {
         const docBaseName = path.parse(doc.fileName).base;
         const docPath = path.join(replacement, "Source", docBaseName);
         documentPaths.push(docPath);
-        const docHash = calculateFileHash(
-          Buffer.from(await documentFiles[index])
-        );
+        const docHash = calculateFileHash(documentFiles[index]);
         const existDocument = await prisma.document.findUnique({
           where: { hash },
         });
@@ -244,7 +249,7 @@ const productTransaction = async (data) => {
           const targetPath = path.join(FILE_STORAGE_PATH, fichePath);
           const dirPath = path.dirname(targetPath);
           await fs.mkdir(dirPath, { recursive: true });
-          await fs.writeFile(targetPath, Buffer.from(ficheFile));
+          await fs.writeFile(targetPath, ficheFile);
           addedPaths.push(targetPath);
         } catch {
           throw new Error("Échec d'enregistrer la fiche.");
@@ -258,10 +263,7 @@ const productTransaction = async (data) => {
             );
             const dirPath = path.dirname(targetPath);
             await fs.mkdir(dirPath, { recursive: true });
-            await fs.writeFile(
-              targetPath,
-              Buffer.from(await documentFiles[index])
-            );
+            await fs.writeFile(targetPath, documentFiles[index]);
             addedPaths.push(targetPath);
           } catch {
             throw new Error(

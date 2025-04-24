@@ -9,7 +9,7 @@ import { getUploadByHash } from "@/lib/services/uploadService";
 const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
 
 export async function POST(request) {
-  const userId = "3020e7e1-873b-48bb-8b91-8159a0d88c0f";
+  const userId = "a59cd394-5f14-42e0-b559-e6f9e0fee105";
   try {
     const formData = await request.formData();
 
@@ -41,9 +41,12 @@ export async function POST(request) {
 
     return NextResponse.json({ error: null }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({
-      error: { message: "Erreur interne du serveur." },
-    });
+    return NextResponse.json(
+      {
+        error: { message: "Erreur interne du serveur." },
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -64,7 +67,7 @@ export const uploadByFileOrAPI = async (data) => {
 
     const date = new Date();
     const formattedDate = format(date, "yyyyMMdd");
-    const name = path.parse(zipFile.name).name;
+    const { base: fileName, name } = path.parse(zipFile.name);
     const uploadName = `${formattedDate}_${uploadType}_${name}`;
 
     await prisma.$transaction(async (prisma) => {
@@ -75,6 +78,7 @@ export const uploadByFileOrAPI = async (data) => {
             name: uploadName,
             type: uploadType,
             hash,
+            fileName,
             user: { connect: { id: userId } },
           },
           select: { id: true },

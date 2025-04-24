@@ -13,30 +13,27 @@ const page = async ({ params }) => {
 
   const formattedFiche = {
     id: fiche.id,
-    name: fiche.name,
     path: path.join(FILE_STORAGE_PATH, fiche.path),
-    extension: fiche.extension,
-    docType: "fiche",
-
+    extension: path.parse(fiche.path).ext,
+    name: path.parse(fiche.path).name,
     ref: fiche.ref,
     source: fiche.dump.source.name,
     createdBy: fiche.createdBy,
     status: fiche.status,
+    docType: "fiche",
   };
   const sourceDocuments = fiche.documents.map((doc) => ({
     id: doc.id,
-    name: doc.name,
     path: path.join(FILE_STORAGE_PATH, doc.path),
-    extension: doc.extension,
-
+    extension: path.parse(doc.path).ext,
+    name: path.parse(doc.path).name,
     docType: "source",
   }));
   const observations = fiche.observations.map((obs) => ({
     id: obs.observer.id,
-    name: obs.observer.name,
     path: path.join(FILE_STORAGE_PATH, obs.path),
-    extension: obs.observer.extension,
-
+    extension: path.parse(obs.path).ext,
+    name: path.parse(obs.path).name,
     ref: obs.observer.ref,
     object: obs.observer.object,
     docType: "observation",

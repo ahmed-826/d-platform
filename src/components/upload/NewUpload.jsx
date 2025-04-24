@@ -17,6 +17,12 @@ const NewUpload = () => {
         { title: "Nouveau téléversement", href: `/upload/newUpload` },
       ]);
     }
+    if (breadcrumbs[breadcrumbs.length - 1].title !== "Nouveau téléversement") {
+      addToBreadcrumbs({
+        title: "Nouveau téléversement",
+        href: `/upload/newUpload`,
+      });
+    }
   }, []);
 
   return (

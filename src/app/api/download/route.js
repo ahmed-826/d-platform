@@ -1,64 +1,73 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { getUploadById } from "@/lib/services/uploadService";
-import { getFicheById } from "@/lib/services/ficheService";
-
-const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
+import JSZip from "jszip";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-
-  const tableName = searchParams.get("tableName");
-  const id = searchParams.get("id");
+  const filePaths = searchParams.getAll("filePath");
+  const fileNameParam = searchParams.get("fileName");
 
   try {
-    if (!tableName || !id) {
+    if (filePaths.length === 0) {
       return NextResponse.json(
-        { data: null, error: { message: "Missing required parameters." } },
+        {
+          data: null,
+          error: { message: "Missing required filePath parameter." },
+        },
         { status: 400 }
       );
     }
 
-    let object;
-    if (tableName === "upload") {
-      object = await getUploadById(id);
-    } else if (tableName === "fiche") {
-      object = await getFicheById(id);
-    } else if (tableName === "document") {
-    } else if (tableName === "failedFiche") {
+    const zip = new JSZip();
+
+    if (filePaths.length === 1) {
+      const filePath = filePaths[0];
+
+      if (!fs.existsSync(filePath)) {
+        return NextResponse.json(
+          { data: null, error: { message: "File not found." } },
+          { status: 404 }
+        );
+      }
+
+      const fileBuffer = fs.readFileSync(filePath);
+      const fileName = fileNameParam || path.basename(filePath);
+
+      return new NextResponse(fileBuffer, {
+        headers: {
+          "Content-Disposition": `attachment; filename="${encodeURIComponent(
+            fileName
+          )}"`,
+          "Content-Type": "application/octet-stream",
+        },
+      });
     } else {
-      return NextResponse.json(
-        { data: null, error: { message: "Invalid table name." } },
-        { status: 400 }
-      );
-    }
+      // Multiple files → ZIP
+      for (const filePath of filePaths) {
+        if (!fs.existsSync(filePath)) continue;
+        const fileData = fs.readFileSync(filePath);
+        const fileName = path.basename(filePath);
+        zip.file(fileName, fileData);
+      }
 
-    if (!object) {
-      return NextResponse.json(
-        { data: null, error: { message: "Record not found." } },
-        { status: 404 }
-      );
-    }
-    const filePath = path.join(FILE_STORAGE_PATH, object.path);
-    console.log(filePath);
-    if (!filePath || !fs.existsSync(filePath)) {
-      return NextResponse.json(
-        { data: null, error: { message: "File not found." } },
-        { status: 404 }
-      );
-    }
+      const zipContent = await zip.generateAsync({ type: "nodebuffer" });
 
-    const fileStream = fs.createReadStream(filePath);
-    const { base: fileName } = path.parse(object.path);
+      const zipName = fileNameParam?.endsWith(".zip")
+        ? fileNameParam
+        : "download.zip";
 
-    return new NextResponse(fileStream, {
-      headers: {
-        "Content-Disposition": `attachment; filename="${fileName}"`,
-        "Content-Type": "application/octet-stream",
-      },
-    });
+      return new NextResponse(zipContent, {
+        headers: {
+          "Content-Disposition": `attachment; filename="${encodeURIComponent(
+            zipName
+          )}"`,
+          "Content-Type": "application/zip",
+        },
+      });
+    }
   } catch (error) {
+    console.error("Download error:", error);
     return NextResponse.json(
       { data: null, error: { message: "Internal Server Error" } },
       { status: 500 }

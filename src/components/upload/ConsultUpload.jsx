@@ -38,16 +38,22 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useApp } from "@/contexts/AppContext";
+import {
+  changeFicheStatus,
+  deleteFiche,
+  deleteMultipleFiches,
+} from "@/lib/serverActions/ficheActions";
 
 const ConsultUpload = ({ upload }) => {
-  const router = useRouter();
-  const { breadcrumbs, addToBreadcrumbs } = useApp();
+  const [successfulFiches, setSuccessfulFiches] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
   const { toast } = useToast();
+  const { breadcrumbs, addToBreadcrumbs } = useApp();
 
   useEffect(() => {
     if (breadcrumbs.length < 2) {
@@ -56,10 +62,10 @@ const ConsultUpload = ({ upload }) => {
         { title: upload.name, href: `/upload/${upload.id}` },
       ]);
     }
+    if (breadcrumbs[breadcrumbs.length - 1].title !== upload.name) {
+      addToBreadcrumbs({ title: upload.name, href: `/upload/${upload.id}` });
+    }
   }, []);
-
-  const [successfulFiches, setSuccessfulFiches] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
 
   useEffect(() => {
     setSuccessfulFiches(
@@ -80,75 +86,166 @@ const ConsultUpload = ({ upload }) => {
     }
   }, [successfulFiches]);
 
-  const handleAction = async (action, id) => {
-    if (id) {
-      switch (action) {
-        case "consult":
-          router.push(`/fiche/${id}`);
-          break;
-        case "download":
-          const request = `/api/download?id=${id}&tableName=fiche`;
-          try {
-            const response = await fetch(request);
-            if (!response.ok) {
-              throw new Error();
-            }
-            toast({
-              title: "Téléchargement lancé",
-              description: "Votre fiche est en cours de téléchargement.",
-            });
-            window.location.href = request;
-          } catch {
-            toast({
-              title: "Erreur lors du téléchargement",
-              description:
-                "Impossible de récupérer la fiche. Veuillez réessayer.",
-            });
-          }
-          break;
-        case "report":
-          break;
-        case "delete":
-          break;
-        default:
-          break;
+  const handleDownload = async (filePath) => {
+    if (filePath) {
+      const request = `/api/download?filePath=${filePath}`;
+      try {
+        const response = await fetch(request);
+        if (!response.ok) {
+          throw new Error();
+        }
+        toast({
+          title: "Téléchargement lancé",
+          description: "Votre fiche est en cours de téléchargement.",
+        });
+        window.location.href = request;
+      } catch {
+        toast({
+          title: "Erreur lors du téléchargement",
+          description: "Impossible de récupérer la fiche. Veuillez réessayer.",
+        });
       }
     } else {
-      // To backend
+      const selectedFichesPaths = successfulFiches
+        .filter((fiche) => fiche.selected)
+        .map((fiche) => fiche.path);
+      const query = selectedFichesPaths
+        .map((path) => `filePath=${encodeURIComponent(path)}`)
+        .join("&");
+      const request = `/api/download?${query}`;
+      try {
+        const response = await fetch(request);
+        if (!response.ok) {
+          throw new Error();
+        }
+        toast({
+          title: "Téléchargement lancé",
+          description: "Votre fiches est en cours de téléchargement.",
+        });
+        window.location.href = request;
+      } catch {
+        toast({
+          title: "Erreur lors du téléchargement",
+          description:
+            "Impossible de récupérer les fiches. Veuillez réessayer.",
+        });
+      }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (id) {
+      const isDeleted = await deleteFiche(id);
+      if (isDeleted) {
+        setSuccessfulFiches((prev) => prev.filter((fiche) => fiche.id !== id));
+        toast({
+          title: "Fiche supprimé",
+          description: "La fiche a été supprimé avec succès.",
+        });
+      } else {
+        toast({
+          title: "Échec de la suppression",
+          description: "Impossible de supprimer la fiche. Veuillez réessayer.",
+        });
+      }
+    } else {
+      const ids = successfulFiches
+        .filter((fiche) => fiche.selected)
+        .map((fiche) => fiche.id);
+      const { deletedFichesIds, failedFiches } = await deleteMultipleFiches(
+        ids
+      );
+      setSuccessfulFiches((prev) =>
+        prev.filter((fiche) => !deletedFichesIds.includes(fiche.id))
+      );
+      if (!failedFiches) {
+        toast({
+          title: "Fiches supprimés",
+          description: "Les fiches sélectionnées ont été supprimé avec succès.",
+        });
+      } else {
+        toast({
+          title: "Échec de la suppression",
+          description:
+            "Impossible de supprimer Tous les fiches sélectionnées. Veuillez réessayer.",
+        });
+      }
+    }
+  };
+
+  const handleReport = async (id) => {
+    if (id) {
+    } else {
     }
   };
 
   const handleDownloadZipFile = async () => {
-    console.log(upload.id);
+    const request = `/api/download?filePath=${upload.path}&fileName=${upload.fileName}`;
     try {
-      const response = await fetch(
-        `/api/download?id=${upload.id}&tableName=upload`
-      );
+      const response = await fetch(request);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error.message || "An error occurred.");
+        throw new Error();
       }
-      window.location.href = `/api/download?id=${upload.id}&tableName=upload`;
-    } catch (error) {
-      alert(`Error: ${error.message}`);
+      toast({
+        title: "Téléchargement lancé",
+        description: "Votre téléversement est en cours de téléchargement.",
+      });
+      window.location.href = request;
+    } catch {
+      toast({
+        title: "Erreur lors du téléchargement",
+        description:
+          "Impossible de récupérer la téléversement. Veuillez réessayer.",
+      });
     }
   };
 
-  const applyPendingChanges = () => {
+  const handleCopyZipFileName = () => {
+    navigator.clipboard.writeText(upload.fileName);
+  };
+
+  const applyPendingChanges = async () => {
+    const changes = successfulFiches
+      .filter((fiche) => fiche.status !== fiche.newStatus && fiche.newStatus)
+      .map((fiche) => ({ id: fiche.id, status: fiche.newStatus }));
+    const { updatedFichesIds, failedUpdating } = await changeFicheStatus(
+      changes
+    );
+
     setSuccessfulFiches((prev) =>
       prev.map((fiche) => {
-        if (fiche.newStatus) {
+        if (updatedFichesIds.includes(fiche.id)) {
           return { ...fiche, status: fiche.newStatus, newStatus: null };
         }
         return fiche;
       })
     );
 
-    // To backend
-  };
+    if (!failedUpdating) {
+      const message =
+        changes.length === 1
+          ? "La fiche sélectionnée a été mise à jour avec succès."
+          : "Les fiches sélectionnées ont été mises à jour avec succès.";
 
-  const handleCopyFileName = () => {
-    navigator.clipboard.writeText(upload.fileName);
+      toast({
+        title:
+          changes.length === 1 ? "Fiche mise à jour" : "Fiches mises à jour",
+        description: message,
+      });
+    } else {
+      const message =
+        changes.length === 1
+          ? "La fiche sélectionnée n'a pas pu être mise à jour. Veuillez réessayer ou vérifier les détails."
+          : "Certaines fiches n'ont pas pu être mises à jour. Veuillez réessayer ou vérifier les détails.";
+
+      toast({
+        title:
+          changes.length === 1
+            ? "Échec de la mise à jour"
+            : "Échec des mises à jour",
+        description: message,
+      });
+    }
   };
 
   const handlePendingStatusChange = (id, newStatus) => {
@@ -259,7 +356,7 @@ const ConsultUpload = ({ upload }) => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={handleCopyFileName}
+                      onClick={handleCopyZipFileName}
                       className="h-7 w-7 p-0"
                     >
                       <Copy className="h-4 w-4 text-gray-600" />
@@ -322,7 +419,7 @@ const ConsultUpload = ({ upload }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleAction("download")}
+                  onClick={() => handleDownload()}
                   disabled={selectedCount === 0}
                 >
                   <Download className="h-4 w-4" />
@@ -338,7 +435,7 @@ const ConsultUpload = ({ upload }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleAction("delete")}
+                  onClick={() => handleDelete()}
                   disabled={selectedCount === 0}
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
@@ -354,7 +451,7 @@ const ConsultUpload = ({ upload }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleAction("report")}
+                  onClick={() => handleReport()}
                   disabled={selectedCount === 0}
                 >
                   <Flag className="h-4 w-4 text-orange-500" />
@@ -560,14 +657,10 @@ const ConsultUpload = ({ upload }) => {
                           <div className="flex justify-end gap-1">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleAction("consult", fiche.id)
-                                  }
-                                >
-                                  <Eye className="h-4 w-4" />
+                                <Button asChild variant="ghost" size="sm">
+                                  <Link href={`/fiche/${fiche.id}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </Link>
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -580,9 +673,7 @@ const ConsultUpload = ({ upload }) => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() =>
-                                    handleAction("download", fiche.id)
-                                  }
+                                  onClick={() => handleDownload(fiche.path)}
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
@@ -597,9 +688,7 @@ const ConsultUpload = ({ upload }) => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() =>
-                                    handleAction("report", fiche.id)
-                                  }
+                                  onClick={() => handleReport(fiche.id)}
                                 >
                                   <Flag className="h-4 w-4 text-orange-500" />
                                 </Button>
@@ -614,9 +703,7 @@ const ConsultUpload = ({ upload }) => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() =>
-                                    handleAction("delete", fiche.id)
-                                  }
+                                  onClick={() => handleDelete(fiche.id)}
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
