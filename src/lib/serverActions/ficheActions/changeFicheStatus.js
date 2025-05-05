@@ -1,3 +1,5 @@
+"use server";
+
 import prisma from "@/lib/db";
 
 export const changeFicheStatus = async (changes) => {
@@ -12,6 +14,7 @@ export const changeFicheStatus = async (changes) => {
       });
       updatedFichesIds.push(change.id);
     } catch (error) {
+      console.log(error.message);
       failedUpdating = true;
     }
   }

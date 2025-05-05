@@ -217,7 +217,7 @@ const ConsultUpload = ({ upload }) => {
         if (updatedFichesIds.includes(fiche.id)) {
           return { ...fiche, status: fiche.newStatus, newStatus: null };
         }
-        return fiche;
+        return { ...fiche, newStatus: null };
       })
     );
 
@@ -298,7 +298,7 @@ const ConsultUpload = ({ upload }) => {
     (fiche) => fiche.selected
   ).length;
   const pendingCount = successfulFiches.filter(
-    (fiche) => fiche.newStatus
+    (fiche) => fiche.newStatus && fiche.newStatus !== fiche.status
   ).length;
 
   const getStatusDisplayName = (status) => {
@@ -572,7 +572,11 @@ const ConsultUpload = ({ upload }) => {
                     return (
                       <TableRow
                         key={fiche.id}
-                        className={fiche.newStatus ? "bg-blue-50" : ""}
+                        className={
+                          fiche.newStatus && fiche.newStatus !== fiche.status
+                            ? "bg-blue-50"
+                            : ""
+                        }
                       >
                         <TableCell>
                           <Checkbox

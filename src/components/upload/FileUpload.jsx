@@ -2,15 +2,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
-
-import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 
 const FileUpload = () => {
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const router = useRouter();
-  const { addPage, returnToPreviousPage } = useApp();
   const { toast } = useToast();
 
   const handleDragOver = (e) => {

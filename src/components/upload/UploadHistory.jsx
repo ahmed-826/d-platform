@@ -34,9 +34,9 @@ import { useEffect, useState } from "react";
 import { runUpload, deleteUpload } from "@/lib/serverActions/uploadActions";
 
 const UploadHistory = ({ uploadsData }) => {
-  const { breadcrumbs, addToBreadcrumbs } = useApp();
   const [uploads, setUploads] = useState(uploadsData);
   const { toast } = useToast();
+  const { breadcrumbs, addToBreadcrumbs } = useApp();
 
   useEffect(() => {
     if (breadcrumbs[breadcrumbs.length - 1].title !== "Téléversements") {
@@ -52,25 +52,38 @@ const UploadHistory = ({ uploadsData }) => {
   const handleRun = async (id) => {
     toast({
       title: "Traitement en cours",
-      description: "Le fichier est en cours de traitement.",
+      description:
+        "Le fichier est en cours de traitement. Veuillez patienter...",
     });
     setUploads((prev) =>
-      prev.map((upload) => {
-        if (upload.id === id) {
-          return { ...upload, status: "Processing" };
-        }
-        return upload;
-      })
+      prev.map((upload) =>
+        upload.id === id ? { ...upload, status: "Processing" } : upload
+      )
     );
-    const processedUpload = await runUpload(id);
-    setUploads((prev) =>
-      prev.map((upload) => {
-        if (upload.id === id) {
-          return processedUpload;
-        }
-        return upload;
-      })
-    );
+
+    const { success, data, error } = await runUpload(id);
+    if (success) {
+      toast({
+        title: "Traitement terminé",
+        description: "Le fichier a été traité avec succès.",
+      });
+
+      setUploads((prev) =>
+        prev.map((upload) => (upload.id === id ? data : upload))
+      );
+    } else {
+      toast({
+        title: "Échec du traitement",
+        description:
+          error?.message ||
+          "Une erreur inattendue s'est produite pendant le traitement.",
+      });
+      setUploads((prev) =>
+        prev.map((upload) =>
+          upload.id === id ? { ...upload, status: "Failed" } : upload
+        )
+      );
+    }
   };
 
   const handleDownload = async (path, fileName) => {
@@ -94,17 +107,27 @@ const UploadHistory = ({ uploadsData }) => {
   };
 
   const handleDelete = async (id) => {
-    const isDeleted = await deleteUpload(id);
-    if (isDeleted) {
-      setUploads((prev) => prev.filter((upload) => upload.id !== id));
+    try {
+      const result = await deleteUpload(id);
+      if (result.success) {
+        setUploads((prev) => prev.filter((upload) => upload.id !== id));
+        toast({
+          title: "Fichier supprimé",
+          description: "Le fichier a été supprimé avec succès.",
+          status: "success",
+        });
+      } else {
+        toast({
+          title: "Échec de la suppression",
+          description: result.error || "Une erreur inconnue est survenue",
+          status: "error",
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Fichier supprimé",
-        description: "Le fichier a été supprimé avec succès.",
-      });
-    } else {
-      toast({
-        title: "Échec de la suppression",
-        description: "Impossible de supprimer le fichier. Veuillez réessayer.",
+        title: "Erreur",
+        description: "Problème de connexion au serveur",
+        status: "error",
       });
     }
   };

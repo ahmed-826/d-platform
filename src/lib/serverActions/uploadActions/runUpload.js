@@ -13,44 +13,114 @@ const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
 
 export const runUpload = async (uploadId) => {
   try {
-    updateUploadById(uploadId, {
-      status: "Processing",
-    });
+    // Start processing
+    await updateUploadById(uploadId, { status: "Processing" });
 
-    const upload = await getUploadById(uploadId);
-    if (!upload) {
-      throw new Error("Téléversement introuvable.");
+    // Check if the upload is validate
+    const validationResult = await uploadValidation(uploadId);
+    if (!validationResult.success) {
+      await updateUploadById(uploadId, { status: "Failed" });
+      return validationResult;
     }
-    if (!upload.path) {
-      throw new Error("Le chemin du téléversement est manquant.");
+
+    // Process products from upload
+    const fileData = validationResult.data;
+    const processResult = await processZipFile(fileData, uploadId);
+    if (!processResult.success) {
+      await updateUploadById(uploadId, { status: "Failed" });
+      return processResult;
     }
-    const fileData = await fs.readFile(
-      path.join(FILE_STORAGE_PATH, upload.path)
-    );
-    const { error } = await getAndUploadProductsFromZipFile(fileData, uploadId);
-    if (error) {
-      throw new Error(error.message);
-    }
-    const updatedUpload = await updateUploadById(uploadId, {
-      status: "Completed",
-    });
-    return formatUploadData(updatedUpload);
+
+    // Update upload status, and format it
+    const upload = await updateUploadById(uploadId, { status: "Completed" });
+    const formattedUpload = formatUpload(upload);
+    return { success: true, data: formattedUpload, error: null };
   } catch (error) {
-    const updatedUpload = await updateUploadById(uploadId, {
-      status: "Failed",
-    });
-    return formatUploadData(updatedUpload);
+    await updateUploadById(uploadId, { status: "Failed" });
+    return {
+      success: false,
+      data: null,
+      error: { message: "Erreur interne du serveur" },
+    };
   }
 };
 
-const getAndUploadProductsFromZipFile = async (fileData, uploadId) => {
+const uploadValidation = async (uploadId) => {
   try {
-    const zip = await JSZip.loadAsync(fileData);
+    const upload = await getUploadById(uploadId);
+    if (!upload) {
+      return {
+        success: false,
+        data: null,
+        error: {
+          message: `Aucun téléversement correspondant n'a été trouvé dans la base de données. Veuillez recharger la page ou réessayer plus tard.`,
+        },
+      };
+    }
+    if (!upload.path) {
+      return {
+        success: false,
+        data: null,
+        error: {
+          message: `Le chemin d'accès au fichier téléversé est manquant. Cela peut indiquer que le traitement est toujours en cours ou que le fichier est incomplet. Veuillez patienter ou supprimer puis recréer le téléversement.`,
+        },
+      };
+    }
 
+    const absolutePath = path.join(FILE_STORAGE_PATH, upload.path);
+    try {
+      await fs.access(absolutePath, fs.constants.F_OK);
+    } catch (error) {
+      return {
+        success: false,
+        data: null,
+        error: {
+          message: `Le fichier lié au téléversement est introuvable à l'emplacement suivant : ${absolutePath}. Vérifiez qu'il n'a pas été déplacé ou supprimé manuellement.`,
+        },
+      };
+    }
+
+    try {
+      const fileData = await fs.readFile(absolutePath);
+      return { success: true, data: fileData, error: null };
+    } catch (error) {
+      return {
+        success: false,
+        data: null,
+        error: {
+          message: `Impossible de lire le fichier lié au téléversement à l'emplacement : ${absolutePath}. Il peut être corrompu ou inaccessible. Supprimez ce téléversement et ajoutez-en un nouveau.`,
+        },
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      error: {
+        message: "Erreur interne du serveur.",
+      },
+    };
+  }
+};
+
+const processZipFile = async (zipFileData, uploadId) => {
+  try {
+    const zip = await JSZip.loadAsync(zipFileData);
     const fileNames = Object.keys(zip.files).filter(
       (fileName) => !zip.files[fileName].dir
     );
     const folders = [...new Set(Object.keys(zip.files).map(path.dirname))];
+
+    await Promise.all(
+      folders.map(async (folder) => {
+        try {
+          await processFolder(zip, folder, fileNames, uploadId);
+        } catch (error) {
+          console.error(`Error processing folder ${folder}:`, error.message);
+        }
+      })
+    );
+
     for (const folder of folders) {
       try {
         const fileNamesInFolder = fileNames.filter(
@@ -77,21 +147,28 @@ const getAndUploadProductsFromZipFile = async (fileData, uploadId) => {
                 Buffer.from(await zip.file(fileName).async("arraybuffer"))
               )
             );
-            const { error } = await productTransaction({
+            const result = await productTransaction({
               jsonData,
               ficheFile,
               ficheName,
               documentFiles,
               uploadId,
             });
-            if (error) {
-              console.log("Error(FailedFiche): ", error.message);
-              //  await insertFailedFiche({ jsonData, ficheFile, documentFiles });
+            if (!result.success) {
+              const message = result.error.message;
+              await insertFailedFiche({
+                jsonData,
+                ficheFile,
+                ficheName,
+                documentFiles,
+                documentsNames,
+                message,
+                uploadId,
+              });
             }
-          } else {
-            //continue;
           }
         } catch (error) {
+          // should be removed
           console.log("Error in Fiche:", error.message);
         }
 
@@ -99,36 +176,104 @@ const getAndUploadProductsFromZipFile = async (fileData, uploadId) => {
           const zipFileNames = fileNamesInFolder.filter((fileName) =>
             fileName.endsWith(".zip")
           );
-
-          const zipFiles = await Promise.all(
-            zipFileNames.map(
-              async (fileName) => await zip.file(fileName).async("arraybuffer")
-            )
-          );
-          for (const zipFile of zipFiles) {
-            await getAndUploadProductsFromZipFile(zipFile, uploadId);
+          for (const zipFileName of zipFileNames) {
+            const zipFile = await zip.file(zipFileName).async("arraybuffer");
+            const result = await processZipFile(zipFile, uploadId);
+            if (!result.success) {
+              const message = result.error.message;
+              await insertFailedFiche({
+                zipFile,
+                zipFileName,
+                message,
+                uploadId,
+              });
+            }
           }
-        } catch {}
-      } catch {}
+        } catch (error) {}
+      } catch (error) {}
     }
 
-    return { error: null };
+    return { success: true, error: null };
   } catch (error) {
-    return { error: { message: error.message } };
+    return {
+      success: false,
+      error: {
+        message:
+          "Le fichier semble corrompu ou illisible. Veuillez supprimer ce téléversement et réessayer avec un nouveau fichier.",
+      },
+    };
   }
 };
 
-const productTransaction = async (data) => {
+async function processFolder(zip, folder, fileNames, uploadId) {
+  const fileNamesInFolder = fileNames.filter(
+    (fileName) => path.dirname(fileName) === folder
+  );
+
+  // Process product
+  const jsonName = fileNamesInFolder.find((fileName) =>
+    fileName.endsWith("data.json")
+  );
+  const ficheName = fileNamesInFolder.find(isFiche);
+  const documentsNames = fileNamesInFolder.filter(
+    (fileName) => isDocument(fileName) && fileName !== ficheName
+  );
+
+  if (jsonName && ficheName && documentsNames.length > 0) {
+    await processProduct(zip, {
+      jsonName,
+      ficheName,
+      documentsNames,
+      uploadId,
+    });
+  }
+
+  // Process nested zip files
+  const zipFileNames = fileNamesInFolder.filter((fileName) =>
+    fileName.endsWith(".zip")
+  );
+  await Promise.all(
+    zipFileNames.map(async (zipFileName) => {
+      try {
+        const zipFile = await zip.file(zipFileName).async("arraybuffer");
+        const result = await processZipFile(zipFile, uploadId);
+
+        if (!result.success) {
+          await insertFailedFiche({
+            zipFile,
+            zipFileName,
+            message: result.error.message,
+            uploadId,
+          });
+        }
+      } catch (error) {
+        console.error(
+          `Error processing nested zip ${zipFileName}:`,
+          error.message
+        );
+      }
+    })
+  );
+}
+
+const processProduct = async (data) => {
   const { jsonData, ficheFile, ficheName, documentFiles, uploadId } = data;
 
   try {
     return await prisma.$transaction(async (prisma) => {
-      let dumpName, sourceName, summary, object, dateGenerate, documentsData;
+      let dumpName,
+        sourceName,
+        dateCollect,
+        summary,
+        object,
+        dateGenerate,
+        documentsData;
       try {
         const jsonObject = JSON.parse(jsonData);
 
         dumpName = jsonObject.index;
         sourceName = jsonObject.source.name;
+        dateCollect = new Date(jsonObject.source.date_collect);
         summary = jsonObject.summary;
         object = jsonObject.object;
         dateGenerate = new Date(jsonObject.date_generate);
@@ -167,13 +312,22 @@ const productTransaction = async (data) => {
       if (!dumpName) {
         throw new Error("Le nom du dump est manquant dans data.json.");
       }
+      if (!dateCollect || isNaN(dateCollect.getTime())) {
+        throw new Error(
+          "La date de collecte du dump est manquant ou invalide dans data.json."
+        );
+      }
       let dump;
       dump = await prisma.dump.findUnique({
         where: { name: dumpName },
       });
       if (!dump) {
         dump = await prisma.dump.create({
-          data: { name: dumpName, source: { connect: { id: source.id } } },
+          data: {
+            name: dumpName,
+            dateCollect,
+            source: { connect: { id: source.id } },
+          },
         });
         if (!dump || !dump.id) {
           throw new Error(
@@ -275,14 +429,13 @@ const productTransaction = async (data) => {
         for (const addedPath of addedPaths) {
           await fs.unlink(addedPath);
         }
-
         throw new Error(error.message);
       }
 
-      return { error: null };
+      return { success: true, error: null };
     });
   } catch (error) {
-    return { error: { message: error.message } };
+    return { success: false, error: { message: error.message } };
   }
 };
 
@@ -302,15 +455,93 @@ const isDocument = (fileName) => {
   );
 };
 
-const formatUploadData = (upload) => ({
-  id: upload.id,
-  name: upload.name,
-  status: upload.status,
-  date: format(upload.date, "dd MMMM yyyy 'à' HH:mm:ss", {
-    locale: fr,
-  }),
-  user: upload.user.username,
-  type: upload.type,
-  successfulFichesCount: upload.fiches.length,
-  totalFichesCount: upload.fiches.length + upload.failedFiches.length,
-});
+const formatUpload = (upload) => {
+  return {
+    id: upload.id,
+    name: upload.name,
+    status: upload.status,
+    date: format(upload.date, "dd MMMM yyyy 'à' HH:mm:ss", {
+      locale: fr,
+    }),
+    user: upload.user.username,
+    type: upload.type,
+    successfulFichesCount: upload.fiches.length,
+    totalFichesCount: upload.fiches.length + upload.failedFiches.length,
+  };
+};
+
+const insertFailedFiche = async ({
+  jsonData,
+  ficheFile,
+  ficheName,
+  documentFiles,
+  documentsNames,
+  zipFile,
+  zipFileName,
+  message,
+  uploadId,
+}) => {
+  try {
+    const dateFolder = format(new Date(), "yyyyMMdd");
+    const failedFichePath = path.join(
+      FILE_STORAGE_PATH,
+      "data",
+      "Fiches échouées",
+      dateFolder
+    );
+
+    await fs.mkdir(failedFichePath, { recursive: true });
+
+    let filePath;
+
+    if (zipFile) {
+      filePath = path.join(failedFichePath, zipFileName);
+
+      await fs.writeFile(filePath, zipFile);
+    } else {
+      const zip = new JSZip();
+
+      if (jsonData) {
+        zip.file("data.json", jsonData);
+      }
+
+      if (ficheFile && ficheName) {
+        zip.file(path.parse(ficheName).base, ficheFile);
+      }
+
+      if (documentFiles && documentsNames) {
+        documentFiles.forEach((file, index) => {
+          const fileName = path.join(
+            "Source",
+            path.parse(documentsNames[index]).base
+          );
+          if (fileName) {
+            zip.file(fileName, file);
+          }
+        });
+      }
+
+      const zipContent = await zip.generateAsync({ type: "nodebuffer" });
+
+      filePath = path.join(
+        failedFichePath,
+        `${path.parse(ficheName).name}.zip`
+      );
+      await fs.writeFile(filePath, zipContent);
+    }
+
+    const failedFiche = await prisma.failedFiche.create({
+      data: {
+        dateGenerate: new Date(),
+        path: filePath,
+        fileName: zipFileName,
+        message,
+        uploadId,
+      },
+    });
+
+    return { success: true, failedFiche };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

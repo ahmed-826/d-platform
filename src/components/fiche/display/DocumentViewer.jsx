@@ -1,6 +1,7 @@
 import { FileText } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import PDFViewer from "./PDFViewer";
+import DOCXViewer from "./DOCXViewer";
 import DocumentActions from "./DocumentActions";
 import EmptyViewer from "./EmptyViewer";
 import ExtensionNotSupportedViewer from "./ExtensionNotSupportedViewer";
@@ -53,7 +54,7 @@ const DocumentViewer = ({ document, withNavigate = false }) => {
       case ".pdf":
         return <PDFViewer path={document.path} />;
       case ".docx":
-        break;
+        return <DOCXViewer path={document.path} />;
       case ".xlsx":
         break;
       default:

@@ -117,7 +117,7 @@ model Fiche {
   dateGenerate   DateTime     @default(now())
   dateDistribute DateTime?
   status         FicheStatus  @default(Suspended)
-  path           String
+  path           String        @unique
   hash           String        @unique
   dumpId         String        @db.Uuid
   dump           Dump          @relation(fields: [dumpId], references: [id], onDelete: Cascade) // Add onDelete here
@@ -157,7 +157,7 @@ model Document {
   type         DocumentType
   content      String?
   meta         Json?
-  path         String
+  path         String     @unique
   rpPath       String?
   hash         String       @unique
   ficheId      String      @db.Uuid
@@ -171,6 +171,7 @@ model FailedFiche {
   dump         Dump?    @relation(fields: [dumpId], references: [id], onDelete: Cascade) // Add onDelete here
   uploadId     String   @db.Uuid
   upload       Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade) // Add onDelete here
-  path         String?
+  path         String?  
+  fileName     String?
   message      String?  
 }

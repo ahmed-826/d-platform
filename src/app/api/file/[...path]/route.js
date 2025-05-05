@@ -4,13 +4,10 @@ import path from "path";
 
 export async function GET(request, { params }) {
   try {
-    // Extract the file path from the dynamic route
     const filePath = params.path.join("/");
 
-    // Construct the absolute path to the file
     const fullPath = path.join(filePath);
 
-    // Check if the file exists
     try {
       await fs.access(fullPath, fs.constants.F_OK);
     } catch {
@@ -20,16 +17,26 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Read the file
     const fileContent = await fs.readFile(fullPath);
 
-    // Determine the content type based on the file extension
-    const mimeType =
-      path.extname(fullPath).toLowerCase() === ".pdf"
-        ? "application/pdf"
-        : "application/octet-stream";
+    const ext = path.extname(fullPath).toLowerCase();
+    let mimeType;
 
-    // Return the file as a response
+    switch (ext) {
+      case ".pdf":
+        mimeType = "application/pdf";
+        break;
+      case ".doc":
+        mimeType = "application/msword";
+        break;
+      case ".docx":
+        mimeType =
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        break;
+      default:
+        mimeType = "application/octet-stream";
+    }
+
     return new NextResponse(fileContent, {
       headers: {
         "Content-Type": mimeType,

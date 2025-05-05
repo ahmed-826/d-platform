@@ -32,10 +32,7 @@ export async function POST(request) {
         userId,
       });
       if (error) {
-        if (status === 409) {
-          return NextResponse.json({ error }, { status: 409 });
-        }
-        throw new Error(error.message);
+        return NextResponse.json({ error }, { status });
       }
     }
 
@@ -131,7 +128,7 @@ export const uploadByFileOrAPI = async (data) => {
 
     return { error: null, status: 200 };
   } catch (error) {
-    return { error: { message: error.message }, status: 500 };
+    return { error: { message: "Erreur interne du serveur." }, status: 500 };
   }
 };
 

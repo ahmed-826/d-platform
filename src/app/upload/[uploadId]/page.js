@@ -35,6 +35,7 @@ const page = async ({ params }) => {
       source: fiche.source,
       uploadStatus: { status: "failed", message: fiche.message },
       status: fiche.status,
+      message: fiche.message,
     })),
     successfulFichesCount: upload.fiches.length,
     totalFichesCount: upload.fiches.length + upload.failedFiches.length,
