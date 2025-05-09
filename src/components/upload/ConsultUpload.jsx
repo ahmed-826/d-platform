@@ -44,17 +44,39 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
 import {
-  changeFicheStatus,
+  updateFichesStatus,
   deleteFiche,
   deleteMultipleFiches,
 } from "@/lib/serverActions/ficheActions";
+import { deleteFailedFiche } from "@/lib/serverActions/failedFicheActions";
 
 const ConsultUpload = ({ upload }) => {
   const [successfulFiches, setSuccessfulFiches] = useState([]);
+  const [failedFiches, setFailedFiches] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const { toast } = useToast();
-  const { breadcrumbs, addToBreadcrumbs } = useApp();
 
+  useEffect(() => {
+    setSuccessfulFiches(
+      upload.successfulFiches.map((fiche) => ({
+        ...fiche,
+        newStatus: null,
+        selected: false,
+      }))
+    );
+    setFailedFiches(upload.failedFiches);
+  }, []);
+
+  useEffect(() => {
+    const selectedCount = successfulFiches.filter(
+      (fiche) => fiche.selected
+    ).length;
+    if (selectedCount === 0) {
+      setSelectAll(false);
+    }
+  }, [successfulFiches]);
+
+  const { breadcrumbs, addToBreadcrumbs } = useApp();
   useEffect(() => {
     if (breadcrumbs.length < 2) {
       addToBreadcrumbs([
@@ -67,120 +89,24 @@ const ConsultUpload = ({ upload }) => {
     }
   }, []);
 
-  useEffect(() => {
-    setSuccessfulFiches(
-      upload.successfulFiches.map((fiche) => ({
-        ...fiche,
-        newStatus: null,
-        selected: false,
-      }))
-    );
-  }, []);
-
-  useEffect(() => {
-    const selectedCount = successfulFiches.filter(
-      (fiche) => fiche.selected
-    ).length;
-    if (selectedCount === 0) {
-      setSelectAll(false);
-    }
-  }, [successfulFiches]);
-
-  const handleDownload = async (filePath) => {
-    if (filePath) {
-      const request = `/api/download?filePath=${filePath}`;
-      try {
-        const response = await fetch(request);
-        if (!response.ok) {
-          throw new Error();
-        }
-        toast({
-          title: "Téléchargement lancé",
-          description: "Votre fiche est en cours de téléchargement.",
-        });
-        window.location.href = request;
-      } catch {
-        toast({
-          title: "Erreur lors du téléchargement",
-          description: "Impossible de récupérer la fiche. Veuillez réessayer.",
-        });
-      }
-    } else {
+  // handle successfulFiche actions
+  const handleDownload = async ({ filePath, fileName, selectedOnes }) => {
+    let request = "/api/download?";
+    if (selectedOnes) {
       const selectedFichesPaths = successfulFiches
         .filter((fiche) => fiche.selected)
         .map((fiche) => fiche.path);
       const query = selectedFichesPaths
         .map((path) => `filePath=${encodeURIComponent(path)}`)
         .join("&");
-      const request = `/api/download?${query}`;
-      try {
-        const response = await fetch(request);
-        if (!response.ok) {
-          throw new Error();
-        }
-        toast({
-          title: "Téléchargement lancé",
-          description: "Votre fiches est en cours de téléchargement.",
-        });
-        window.location.href = request;
-      } catch {
-        toast({
-          title: "Erreur lors du téléchargement",
-          description:
-            "Impossible de récupérer les fiches. Veuillez réessayer.",
-        });
-      }
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (id) {
-      const isDeleted = await deleteFiche(id);
-      if (isDeleted) {
-        setSuccessfulFiches((prev) => prev.filter((fiche) => fiche.id !== id));
-        toast({
-          title: "Fiche supprimé",
-          description: "La fiche a été supprimé avec succès.",
-        });
-      } else {
-        toast({
-          title: "Échec de la suppression",
-          description: "Impossible de supprimer la fiche. Veuillez réessayer.",
-        });
-      }
+      request = request + query;
     } else {
-      const ids = successfulFiches
-        .filter((fiche) => fiche.selected)
-        .map((fiche) => fiche.id);
-      const { deletedFichesIds, failedFiches } = await deleteMultipleFiches(
-        ids
-      );
-      setSuccessfulFiches((prev) =>
-        prev.filter((fiche) => !deletedFichesIds.includes(fiche.id))
-      );
-      if (!failedFiches) {
-        toast({
-          title: "Fiches supprimés",
-          description: "Les fiches sélectionnées ont été supprimé avec succès.",
-        });
-      } else {
-        toast({
-          title: "Échec de la suppression",
-          description:
-            "Impossible de supprimer Tous les fiches sélectionnées. Veuillez réessayer.",
-        });
-      }
+      request = request + `filePath=${filePath}`;
     }
-  };
 
-  const handleReport = async (id) => {
-    if (id) {
-    } else {
+    if (fileName) {
+      request = request + `&fileName=${fileName}`;
     }
-  };
-
-  const handleDownloadZipFile = async () => {
-    const request = `/api/download?filePath=${upload.path}&fileName=${upload.fileName}`;
     try {
       const response = await fetch(request);
       if (!response.ok) {
@@ -188,111 +114,151 @@ const ConsultUpload = ({ upload }) => {
       }
       toast({
         title: "Téléchargement lancé",
-        description: "Votre téléversement est en cours de téléchargement.",
+        description: "Votre ressource est en cours de téléchargement.",
       });
       window.location.href = request;
     } catch {
       toast({
         title: "Erreur lors du téléchargement",
         description:
-          "Impossible de récupérer la téléversement. Veuillez réessayer.",
+          "Impossible de récupérer la ressource. Veuillez réessayer.",
       });
     }
-  };
+  }; ///
+
+  const handleDeleteFiche = async (ficheId) => {
+    const {
+      success,
+      data: deletedFicheId,
+      message,
+    } = await deleteFiche(ficheId);
+
+    setSuccessfulFiches((prev) =>
+      prev.filter((fiche) => fiche.id !== deletedFicheId)
+    );
+
+    toast({
+      title: success ? "Ressource supprimée" : "Échec de la suppression",
+      description: message,
+      variant: success ? "default" : "destructive",
+    });
+  }; ///
+
+  const handleDeleteMultipleFiches = async () => {
+    const fichesToBeDeletedIds = successfulFiches
+      .filter((fiche) => fiche.selected)
+      .map((fiche) => fiche.id);
+
+    const {
+      success,
+      data: deletedFichesIds,
+      message,
+    } = await deleteMultipleFiches(fichesToBeDeletedIds);
+
+    setSuccessfulFiches((prev) =>
+      prev.filter((fiche) => !deletedFichesIds.includes(fiche.id))
+    );
+
+    toast({
+      title: success ? "Ressources supprimés" : "Échec de la suppression",
+      description: message,
+      variant: success ? "default" : "destructive",
+    });
+  }; ///
+
+  const handleReportFiche = async (ficheId) => {};
+
+  const handleReportMultipleFiches = async () => {};
+
+  const handleDeleteFailedFiche = async (ficheId) => {
+    const {
+      success,
+      data: deletedFicheId,
+      message,
+    } = await deleteFailedFiche(ficheId);
+
+    setFailedFiches((prev) =>
+      prev.filter((fiche) => fiche.id !== deletedFicheId)
+    );
+
+    toast({
+      title: success ? "Ressource supprimée" : "Échec de la suppression",
+      description: message,
+      variant: success ? "default" : "destructive",
+    });
+  }; ///
+
+  const handleChangeStatus = (id, newStatus) => {
+    setSuccessfulFiches((prev) =>
+      prev.map((fiche) => (fiche.id === id ? { ...fiche, newStatus } : fiche))
+    );
+  }; ///
+
+  const handleChangeMultipleStatus = (newStatus) => {
+    setSuccessfulFiches((prev) =>
+      prev.map((fiche) => (fiche.selected ? { ...fiche, newStatus } : fiche))
+    );
+  }; ///
 
   const handleCopyZipFileName = () => {
     navigator.clipboard.writeText(upload.fileName);
-  };
+  }; ///
 
-  const applyPendingChanges = async () => {
-    const changes = successfulFiches
+  const cancelChanges = () => {
+    setSuccessfulFiches((prev) =>
+      prev.map((fiche) => ({ ...fiche, newStatus: null }))
+    );
+  }; ///
+
+  const applyChanges = async () => {
+    const fichesToBeUpdate = successfulFiches
       .filter((fiche) => fiche.status !== fiche.newStatus && fiche.newStatus)
       .map((fiche) => ({ id: fiche.id, status: fiche.newStatus }));
-    const { updatedFichesIds, failedUpdating } = await changeFicheStatus(
-      changes
-    );
+
+    const {
+      success,
+      data: updatedFichesIds,
+      message,
+    } = await updateFichesStatus(fichesToBeUpdate);
 
     setSuccessfulFiches((prev) =>
       prev.map((fiche) => {
         if (updatedFichesIds.includes(fiche.id)) {
-          return { ...fiche, status: fiche.newStatus, newStatus: null };
+          return {
+            ...fiche,
+            status: fiche.newStatus,
+            newStatus: null,
+            selected: false,
+          };
         }
-        return { ...fiche, newStatus: null };
-      })
-    );
-
-    if (!failedUpdating) {
-      const message =
-        changes.length === 1
-          ? "La fiche sélectionnée a été mise à jour avec succès."
-          : "Les fiches sélectionnées ont été mises à jour avec succès.";
-
-      toast({
-        title:
-          changes.length === 1 ? "Fiche mise à jour" : "Fiches mises à jour",
-        description: message,
-      });
-    } else {
-      const message =
-        changes.length === 1
-          ? "La fiche sélectionnée n'a pas pu être mise à jour. Veuillez réessayer ou vérifier les détails."
-          : "Certaines fiches n'ont pas pu être mises à jour. Veuillez réessayer ou vérifier les détails.";
-
-      toast({
-        title:
-          changes.length === 1
-            ? "Échec de la mise à jour"
-            : "Échec des mises à jour",
-        description: message,
-      });
-    }
-  };
-
-  const handlePendingStatusChange = (id, newStatus) => {
-    setSuccessfulFiches((prev) =>
-      prev.map((fiche) => {
-        if (fiche.id === id) {
-          return { ...fiche, newStatus: newStatus };
+        if (!fichesToBeUpdate.includes(fiche.id) && fiche.selected) {
+          return { ...fiche, selected: false };
         }
         return fiche;
       })
     );
-  };
 
-  const handleBulkStatusChange = (newStatus) => {
-    setSuccessfulFiches((prev) =>
-      prev.map((fiche) => {
-        if (fiche.selected) {
-          return { ...fiche, newStatus };
-        }
-        return fiche;
-      })
-    );
-  };
-
-  const cancelPendingChanges = () => {
-    setSuccessfulFiches((prev) =>
-      prev.map((fiche) => ({ ...fiche, newStatus: null }))
-    );
-  };
+    toast({
+      title: success ? "Ressources mises à jour" : "Échec de la mise à jour",
+      description: message,
+      variant: success ? "default" : "destructive",
+    });
+  }; //*  (handle singular/plural in the message)
 
   const toggleSelectItem = (id) => {
     setSuccessfulFiches((prev) =>
-      prev.map((fiche) => {
-        if (fiche.id === id) {
-          return { ...fiche, selected: !fiche.selected };
-        }
-        return fiche;
-      })
+      prev.map((fiche) =>
+        fiche.id === id ? { ...fiche, selected: !fiche.selected } : fiche
+      )
     );
-  };
+  }; ///
 
   const toggleSelectAll = () => {
     setSelectAll((prev) => !prev);
     setSuccessfulFiches((prev) =>
       prev.map((fiche) => ({ ...fiche, selected: !selectAll }))
     );
-  };
+  }; ///
 
   const selectedCount = successfulFiches.filter(
     (fiche) => fiche.selected
@@ -332,7 +298,10 @@ const ConsultUpload = ({ upload }) => {
       <div className="px-6 py-4 flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">
-            Consulter téléversement: {upload.name}
+            Consulter téléversement:{" "}
+            <span className="bg-gray-100 rounded-2xl px-2 py-1 text-gray-600">
+              {upload.name}
+            </span>
           </h2>
           <div className="flex items-center gap-4">
             <div className="flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
@@ -372,7 +341,12 @@ const ConsultUpload = ({ upload }) => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={handleDownloadZipFile}
+                      onClick={() =>
+                        handleDownload({
+                          filePath: upload.path,
+                          fileName: upload.fileName,
+                        })
+                      }
                       className="h-7 w-7 p-0"
                     >
                       <Download className="h-4 w-4 text-gray-600" />
@@ -419,7 +393,7 @@ const ConsultUpload = ({ upload }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDownload()}
+                  onClick={() => handleDownload({ selectedOnes: true })}
                   disabled={selectedCount === 0}
                 >
                   <Download className="h-4 w-4" />
@@ -435,7 +409,7 @@ const ConsultUpload = ({ upload }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDelete()}
+                  onClick={handleDeleteMultipleFiches}
                   disabled={selectedCount === 0}
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
@@ -451,7 +425,7 @@ const ConsultUpload = ({ upload }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleReport()}
+                  onClick={handleReportMultipleFiches}
                   disabled={selectedCount === 0}
                 >
                   <Flag className="h-4 w-4 text-orange-500" />
@@ -477,21 +451,21 @@ const ConsultUpload = ({ upload }) => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem
-                      onClick={() => handleBulkStatusChange("Suspended")}
+                      onClick={() => handleChangeMultipleStatus("Suspended")}
                       className="flex items-center cursor-pointer"
                     >
                       <PauseCircle className="mr-2 h-4 w-4 text-yellow-500" />
                       Suspendue
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => handleBulkStatusChange("Valid")}
+                      onClick={() => handleChangeMultipleStatus("Valid")}
                       className="flex items-center cursor-pointer"
                     >
                       <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
                       Validé
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => handleBulkStatusChange("Canceled")}
+                      onClick={() => handleChangeMultipleStatus("Canceled")}
                       className="flex items-center cursor-pointer"
                     >
                       <XCircle className="mr-2 h-4 w-4 text-red-500" />
@@ -518,7 +492,7 @@ const ConsultUpload = ({ upload }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={cancelPendingChanges}
+                  onClick={cancelChanges}
                   className="h-8 px-2 py-1"
                 >
                   Annuler
@@ -526,7 +500,7 @@ const ConsultUpload = ({ upload }) => {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={applyPendingChanges}
+                  onClick={applyChanges}
                   className="h-8 px-2 py-1"
                 >
                   Appliquer
@@ -622,10 +596,7 @@ const ConsultUpload = ({ upload }) => {
                             <DropdownMenuContent align="start">
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handlePendingStatusChange(
-                                    fiche.id,
-                                    "Suspended"
-                                  )
+                                  handleChangeStatus(fiche.id, "Suspended")
                                 }
                                 className="flex items-center cursor-pointer"
                               >
@@ -634,7 +605,7 @@ const ConsultUpload = ({ upload }) => {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handlePendingStatusChange(fiche.id, "Valid")
+                                  handleChangeStatus(fiche.id, "Valid")
                                 }
                                 className="flex items-center cursor-pointer"
                               >
@@ -643,10 +614,7 @@ const ConsultUpload = ({ upload }) => {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handlePendingStatusChange(
-                                    fiche.id,
-                                    "Canceled"
-                                  )
+                                  handleChangeStatus(fiche.id, "Canceled")
                                 }
                                 className="flex items-center cursor-pointer"
                               >
@@ -677,7 +645,9 @@ const ConsultUpload = ({ upload }) => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleDownload(fiche.path)}
+                                  onClick={() =>
+                                    handleDownload({ filePath: fiche.path })
+                                  }
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
@@ -692,7 +662,7 @@ const ConsultUpload = ({ upload }) => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleReport(fiche.id)}
+                                  onClick={() => handleReportFiche(fiche.id)}
                                 >
                                   <Flag className="h-4 w-4 text-orange-500" />
                                 </Button>
@@ -707,7 +677,7 @@ const ConsultUpload = ({ upload }) => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleDelete(fiche.id)}
+                                  onClick={() => handleDeleteFiche(fiche.id)}
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
@@ -722,7 +692,7 @@ const ConsultUpload = ({ upload }) => {
                     );
                   })}
 
-                  {upload.failedFiches.map((fiche) => {
+                  {failedFiches.map((fiche) => {
                     index++;
                     return (
                       <TableRow key={fiche.id}>
@@ -760,7 +730,7 @@ const ConsultUpload = ({ upload }) => {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() =>
-                                      handleAction("download", fiche.id)
+                                      handleDownload({ filePath: fiche.path })
                                     }
                                   >
                                     <Download className="h-4 w-4" />
@@ -777,7 +747,7 @@ const ConsultUpload = ({ upload }) => {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() =>
-                                    handleAction("delete", fiche.id)
+                                    handleDeleteFailedFiche(fiche.id)
                                   }
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />

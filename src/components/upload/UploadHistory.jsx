@@ -36,8 +36,8 @@ import { runUpload, deleteUpload } from "@/lib/serverActions/uploadActions";
 const UploadHistory = ({ uploadsData }) => {
   const [uploads, setUploads] = useState(uploadsData);
   const { toast } = useToast();
-  const { breadcrumbs, addToBreadcrumbs } = useApp();
 
+  const { breadcrumbs, addToBreadcrumbs } = useApp();
   useEffect(() => {
     if (breadcrumbs[breadcrumbs.length - 1].title !== "Téléversements") {
       addToBreadcrumbs({
@@ -86,8 +86,8 @@ const UploadHistory = ({ uploadsData }) => {
     }
   };
 
-  const handleDownload = async (path, fileName) => {
-    const request = `/api/download?filePath=${path}&fileName=${fileName}`;
+  const handleDownload = async (filePath, fileName) => {
+    const request = `/api/download?filePath=${filePath}&fileName=${fileName}`;
     try {
       const response = await fetch(request);
       if (!response.ok) {
@@ -107,29 +107,17 @@ const UploadHistory = ({ uploadsData }) => {
   };
 
   const handleDelete = async (id) => {
-    try {
-      const result = await deleteUpload(id);
-      if (result.success) {
-        setUploads((prev) => prev.filter((upload) => upload.id !== id));
-        toast({
-          title: "Fichier supprimé",
-          description: "Le fichier a été supprimé avec succès.",
-          status: "success",
-        });
-      } else {
-        toast({
-          title: "Échec de la suppression",
-          description: result.error || "Une erreur inconnue est survenue",
-          status: "error",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Problème de connexion au serveur",
-        status: "error",
-      });
-    }
+    const { success, data: deletedUploadId, message } = await deleteUpload(id);
+
+    setUploads((prev) =>
+      prev.filter((upload) => upload.id !== deletedUploadId)
+    );
+
+    toast({
+      title: success ? "Ressource supprimée" : "Échec de la suppression",
+      description: message,
+      variant: success ? "default" : "destructive",
+    });
   };
 
   const getTypeDisplayName = (type) => {

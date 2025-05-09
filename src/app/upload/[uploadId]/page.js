@@ -33,6 +33,7 @@ const page = async ({ params }) => {
     failedFiches: upload.failedFiches.map((fiche) => ({
       id: fiche.id,
       source: fiche.source,
+      path: path.join(FILE_STORAGE_PATH, fiche.path),
       uploadStatus: { status: "failed", message: fiche.message },
       status: fiche.status,
       message: fiche.message,

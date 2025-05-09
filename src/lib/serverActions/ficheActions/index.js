@@ -1,4 +1,4 @@
 import { deleteFiche, deleteMultipleFiches } from "./deleteFiche";
-import { changeFicheStatus } from "./changeFicheStatus";
+import { updateFichesStatus } from "./updateFichesStatus";
 
-export { deleteFiche, deleteMultipleFiches, changeFicheStatus };
+export { deleteFiche, deleteMultipleFiches, updateFichesStatus };
