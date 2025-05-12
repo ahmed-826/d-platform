@@ -13,21 +13,24 @@ const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
 export const addUpload = async (formData) => {
   formData.set("userId", "a59cd394-5f14-42e0-b559-e6f9e0fee105"); // TODO: remove this line when userId is passed from the client side
   try {
-    const { type, userId } = formDataValidation(formData);
+    formDataValidation(formData);
+    const type = formData.get("type");
 
     if (["File", "API"].includes(type)) {
-      const zipFile = formData.get("file");
-      const { success, error } = await uploadByFileOrAPI({
-        zipFile,
-        type,
-        userId,
-      });
-      if (!success) throw error;
+      await uploadByFileOrAPI(formData);
 
       return {
         success: true,
         data: null,
         message: "Le fichier a été téléversé avec succès.",
+      };
+    }
+    if (type === "Form") {
+      await uploadByForm(formData);
+      return {
+        success: true,
+        data: null,
+        message: "Le formulaire a été téléversé avec succès.",
       };
     }
   } catch (error) {
@@ -48,15 +51,21 @@ const formDataValidation = (formData) => {
   const type = formData.get("type");
   const userId = formData.get("userId");
 
-  if (!type || !userId) {
+  if (!type) {
     throw new RoleBasedError({
       0: `Erreur interne du serveur.\nType de téléversement est manquant.`,
       1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
     });
   }
+  if (!userId) {
+    throw new RoleBasedError({
+      0: `Erreur interne du serveur.\nID utilisateur est manquant.`,
+      1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+    });
+  }
   if (!["Form", "File", "API"].includes(type)) {
     throw new RoleBasedError({
-      0: `Erreur interne du serveur.Type de téléversement fourni est invalide : '${type}'. Les types acceptés sont : 'Form', 'File' ou 'API'.`,
+      0: `Erreur interne du serveur.\nType de téléversement fourni est invalide : '${type}'. Les types acceptés sont : 'Form', 'File' ou 'API'.`,
       1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
     });
   }
@@ -64,8 +73,7 @@ const formDataValidation = (formData) => {
     const zipFile = formData.get("file");
     if (!zipFile) {
       throw new RoleBasedError({
-        0: `Aucun fichier n'a été téléversé, ou le fichier fourni est invalide. Veuillez sélectionner un fichier valide et réessayer.`,
-        1: `Le fichier fourni est invalide. Veuillez sélectionner un fichier valide et réessayer.`,
+        1: `Aucun fichier n'a été téléversé, ou le fichier fourni est invalide. Veuillez sélectionner un fichier valide et réessayer.`,
       });
     }
     if (
@@ -77,89 +85,108 @@ const formDataValidation = (formData) => {
       });
     }
   }
-  return { type, userId };
-};
-
-const uploadByFileOrAPI = async (data) => {
-  const { zipFile, type, userId } = data;
-
-  try {
-    const { fileData, hash } = await existenceValidation(zipFile);
-
-    const date = new Date();
-    const formattedDate = format(date, "yyyyMMdd");
-    const rank = await getUploadRank(date);
-
-    const fileName = zipFile.name;
-    const name = `${format(date, "ddMMMMyyyy", {
-      locale: fr,
-    })}-${type}-${rank}`;
-    const uploadPath = path.join(
-      "data",
-      "uploads",
-      formattedDate,
-      `${rank} - ${type} - ${fileName}`
-    );
-
-    await prisma.$transaction(async (prisma) => {
-      await prisma.upload
-        .create({
-          data: {
-            name,
-            type,
-            hash,
-            fileName,
-            path: uploadPath,
-            user: { connect: { id: userId } },
-          },
-        })
-        .catch((error) => {
-          throw new RoleBasedError({
-            0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la création du téléversement.\n${error.message}`,
-            1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
-          });
-        });
-
-      const targetPath = path.join(FILE_STORAGE_PATH, uploadPath);
-      const dirPath = path.dirname(targetPath);
-      await fs.mkdir(dirPath, { recursive: true }).catch((error) => {
-        throw new RoleBasedError({
-          0: `Erreur interne du serveur, au niveau du système de fichiers.\nErreur lors de la création du répertoire de téléversement.\n${error.message}`,
-          1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
-        });
-      });
-      await fs.writeFile(targetPath, fileData).catch((error) => {
-        throw new RoleBasedError({
-          0: `Erreur interne du serveur, au niveau du système de fichiers.\nErreur lors de l'écriture du fichier de téléversement.\n${error.message}`,
-          1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
-        });
-      });
-    });
-
-    return { success: true, error: null };
-  } catch (error) {
-    return { success: false, error };
+  if (type === "Form") {
+    const source = formData.get("source");
+    const object = formData.get("object");
+    const summary = formData.get("summary");
+    const documents = formData.getAll("documents");
+    if (!source) {
+      throw new RoleBasedError({ 1: `Source est manquante.` });
+    }
+    if (!object) {
+      throw new RoleBasedError({ 1: `Objet est manquant.` });
+    }
+    if (!summary) {
+      throw new RoleBasedError({ 1: `Synthèse est manquante.` });
+    }
+    if (documents.length === 0) {
+      throw new RoleBasedError({ 1: `Document source sont manquantes.` });
+    }
   }
 };
 
+const uploadByFileOrAPI = async (formData) => {
+  const type = formData.get("type");
+  const userId = formData.get("userId");
+  const zipFile = formData.get("file");
+
+  const { fileData, hash } = await existenceValidation(zipFile);
+
+  const date = new Date();
+  const formattedDate = format(date, "yyyyMMdd");
+  const rank = await getUploadRank(date);
+
+  const fileName = zipFile.name;
+  const name = `${format(date, "ddMMMMyyyy", {
+    locale: fr,
+  })}-${type}-${rank}`;
+  const uploadPath = path.join(
+    "data",
+    "uploads",
+    formattedDate,
+    `${rank} - ${type} - ${fileName}`
+  );
+
+  await prisma.$transaction(async (prisma) => {
+    await prisma.upload
+      .create({
+        data: {
+          name,
+          type,
+          hash,
+          fileName,
+          path: uploadPath,
+          user: { connect: { id: userId } },
+        },
+      })
+      .catch((error) => {
+        throw new RoleBasedError({
+          0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la création du téléversement.\n${error.message}`,
+          1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+        });
+      });
+
+    const targetPath = path.join(FILE_STORAGE_PATH, uploadPath);
+    const dirPath = path.dirname(targetPath);
+    await fs.mkdir(dirPath, { recursive: true }).catch((error) => {
+      throw new RoleBasedError({
+        0: `Erreur interne du serveur, au niveau du système de fichiers.\nErreur lors de la création du répertoire de téléversement.\n${error.message}`,
+        1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+      });
+    });
+    await fs.writeFile(targetPath, fileData).catch((error) => {
+      throw new RoleBasedError({
+        0: `Erreur interne du serveur, au niveau du système de fichiers.\nErreur lors de l'écriture du fichier de téléversement.\n${error.message}`,
+        1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+      });
+    });
+  });
+};
+
 const existenceValidation = async (zipFile) => {
-  let isExist;
   try {
     const fileData = Buffer.from(await zipFile.arrayBuffer());
     const hash = calculateFileHash(fileData);
-    isExist = await prisma.upload
+
+    await prisma.upload
       .findUnique({ where: { hash } })
+      .then((upload) => {
+        if (upload) {
+          throw new RoleBasedError({
+            1: `Le fichier a été déjà téléversé.\nVeuillez utiliser un autre fichier.`,
+          });
+        }
+      })
       .catch((error) => {
+        if (error instanceof RoleBasedError) {
+          throw error;
+        }
         throw new RoleBasedError({
           0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la validation de l'existence du fichier.\n${error.message}`,
-          1: `Erreur interne du serveur, au niveau de la base de données.\nContacter le Super administrateur.`,
+          1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
         });
       });
-    if (isExist) {
-      throw new RoleBasedError({
-        1: `Le fichier a été déjà téléversé.\nVeuillez utiliser un autre fichier.`,
-      });
-    }
+
     return { fileData, hash };
   } catch (error) {
     if (error instanceof RoleBasedError) {
@@ -202,4 +229,52 @@ const getUploadRank = async (date) => {
       1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
     });
   }
+};
+
+const uploadByForm = async (formData) => {
+  const userId = formData.get("userId");
+  const type = formData.get("type");
+  const source = formData.get("source");
+  const object = formData.get("object");
+  const summary = formData.get("summary");
+  const documents = formData.getAll("documents");
+  const date = new Date();
+  const formattedDate = format(date, "yyyyMMdd");
+  let dump = formData.get("dump");
+  if (dump) {
+    dump = `files_${source}-${formattedDate}_dp`;
+  }
+
+  const rank = await getUploadRank(date);
+
+  const fileName = zipFile.name;
+  const name = `${format(date, "ddMMMMyyyy", {
+    locale: fr,
+  })}-${type}-${rank}`;
+  const uploadPath = path.join(
+    "data",
+    "uploads",
+    formattedDate,
+    `${rank} - ${type} - ${fileName}`
+  );
+
+  await prisma.$transaction(async (prisma) => {
+    await prisma.upload
+      .create({
+        data: {
+          name,
+          type,
+          hash,
+          fileName,
+          path: uploadPath,
+          user: { connect: { id: userId } },
+        },
+      })
+      .catch((error) => {
+        throw new RoleBasedError({
+          0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la création du téléversement.\n${error.message}`,
+          1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+        });
+      });
+  });
 };

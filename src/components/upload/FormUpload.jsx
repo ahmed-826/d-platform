@@ -18,7 +18,7 @@ const FormUpload = () => {
   const [source, setSource] = useState("");
   const [dump, setDump] = useState("");
   const [object, setObject] = useState("");
-  const [synthesis, setSynthesis] = useState("");
+  const [summary, setSummary] = useState("");
   const [uploadName, setUploadName] = useState("");
   const [sourceDocuments, setSourceDocuments] = useState([]);
   const router = useRouter();
@@ -36,7 +36,7 @@ const FormUpload = () => {
       source,
       dump,
       object,
-      synthesis,
+      summary,
       sourceDocuments,
       type: "form",
     };
@@ -122,11 +122,11 @@ const FormUpload = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="synthesis">Synthèse</Label>
+            <Label htmlFor="summary">Synthèse</Label>
             <Textarea
-              id="synthesis"
-              value={synthesis}
-              onChange={(e) => setSynthesis(e.target.value)}
+              id="summary"
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
               placeholder="Entrez la synthèse"
               rows={4}
             />

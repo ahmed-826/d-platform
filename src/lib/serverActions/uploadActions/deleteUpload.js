@@ -10,14 +10,22 @@ const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
 export const deleteUpload = async (id) => {
   try {
     return await prisma.$transaction(async (prisma) => {
-      const { filesToDelete, directoriesToDelete } =
+      const { uploadToDelete, fichesToDelete, failedFichesToDelete } =
         await collectResourcesToDelete(prisma, id);
 
-      await verifyResourcesExist([...filesToDelete, ...directoriesToDelete]);
+      await verifyResourcesExist([
+        uploadToDelete,
+        ...fichesToDelete,
+        ...failedFichesToDelete,
+      ]);
 
       await deleteDatabaseRecords(prisma, id);
 
-      await deleteFilesystemResources(filesToDelete, directoriesToDelete);
+      await deleteFilesystemResources(
+        uploadToDelete,
+        fichesToDelete,
+        failedFichesToDelete
+      );
 
       return {
         success: true,
@@ -27,6 +35,7 @@ export const deleteUpload = async (id) => {
     });
   } catch (error) {
     const role = "superAdmin";
+    console.error(error); // Log the error for debugging
 
     return {
       success: false,
@@ -40,10 +49,11 @@ export const deleteUpload = async (id) => {
 };
 
 const collectResourcesToDelete = async (prisma, uploadId) => {
-  const filesToDelete = [];
-  const directoriesToDelete = [];
+  let uploadToDelete = null;
+  const fichesToDelete = [];
+  const failedFichesToDelete = [];
 
-  const upload = await prisma.upload
+  await prisma.upload
     .findUnique({
       where: { id: uploadId },
       select: { path: true },
@@ -57,11 +67,11 @@ const collectResourcesToDelete = async (prisma, uploadId) => {
       if (!upload.path) {
         throw new RoleBasedError({
           0: `Téléversement sans chemin d'accès.\nVeuillez utiliser le mode forcé.`,
-          1: `Téléversement sans chemin d'accès.\nSignaler cette ressource.`,
+          1: `Téléversement sans chemin d'accès.\nSignaler la ressource.`,
         });
       }
 
-      return upload;
+      uploadToDelete = path.join(FILE_STORAGE_PATH, upload.path);
     })
     .catch((error) => {
       if (error instanceof RoleBasedError) {
@@ -73,8 +83,6 @@ const collectResourcesToDelete = async (prisma, uploadId) => {
       });
     });
 
-  filesToDelete.push(path.join(FILE_STORAGE_PATH, upload.path));
-
   await prisma.fiche
     .findMany({
       where: { uploadId },
@@ -84,11 +92,11 @@ const collectResourcesToDelete = async (prisma, uploadId) => {
       fiches.forEach((fiche) => {
         if (!fiche?.path) {
           throw new RoleBasedError({
-            0: `L'un des fiches est sans chemin d'accès.\nVeuillez utiliser le mode forcé.`,
-            1: `L'un des fiches est sans chemin d'accès.\nSignaler la ressource.`,
+            0: `Fiche sans chemin d'accès.\nVeuillez utiliser le mode forcé.`,
+            1: `Fiche sans chemin d'accès.\nSignaler la ressource.`,
           });
         }
-        directoriesToDelete.push(
+        fichesToDelete.push(
           path.join(FILE_STORAGE_PATH, path.dirname(fiche.path))
         );
       });
@@ -112,11 +120,14 @@ const collectResourcesToDelete = async (prisma, uploadId) => {
       failedFiches.forEach((failedFiche) => {
         if (!failedFiche?.path) {
           throw new RoleBasedError({
-            0: `L'un des fiches échouées est sans chemin d'accès.\nVeuillez utiliser le mode forcé.`,
-            1: `L'un des fiches échouées est sans chemin d'accès.\nSignaler la ressource.`,
+            0: `Fiche échouée sans chemin d'accès.\nVeuillez utiliser le mode forcé.`,
+            1: `Fiche échouée sans chemin d'accès.\nSignaler la ressource.`,
           });
         }
-        filesToDelete.push();
+        failedFichesToDelete.push(
+          FILE_STORAGE_PATH,
+          path.dirname(failedFiches.path)
+        );
       });
     })
     .catch((error) => {
@@ -129,7 +140,7 @@ const collectResourcesToDelete = async (prisma, uploadId) => {
       });
     });
 
-  return { filesToDelete, directoriesToDelete };
+  return { uploadToDelete, fichesToDelete, failedFichesToDelete };
 };
 
 const verifyResourcesExist = async (paths) => {
@@ -137,7 +148,8 @@ const verifyResourcesExist = async (paths) => {
     paths.map(async (path) => {
       await fs.access(path, fs.constants.F_OK).catch(() => {
         throw new RoleBasedError({
-          1: `Ressources manquantes.\nLe fichier ou le répertoire suivant est introuvable:\n${path}`,
+          0: `Ressources manquantes.\nLe fichier ou le répertoire suivant est introuvable:\n${path}.\n Veuillez utiliser le mode forcé.`,
+          1: `Ressources manquantes.\nLe fichier ou le répertoire suivant est introuvable:\n${path}.\n Signaler la ressource.`,
         });
       });
     })
@@ -162,30 +174,45 @@ const deleteDatabaseRecords = async (prisma, uploadId) => {
 
   await prisma.upload.delete({ where: { id: uploadId } }).catch((error) => {
     throw new RoleBasedError({
-      0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la suppression du téléversement.\n${error.message}`,
+      0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la suppression de téléversement.\n${error.message}`,
       1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
     });
   });
 };
 
-async function deleteFilesystemResources(filesToDelete, directoriesToDelete) {
-  const fileDeletions = filesToDelete.map((filePath) =>
-    fs.unlink(filePath, fs.constants.F_OK).catch((error) => {
-      throw new RoleBasedError({
-        0: `Erreur interne du serveur.\nErreur lors de la suppression des fichiers.\n${error.message}`,
-        1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
-      });
-    })
-  );
+const deleteFilesystemResources = async (
+  uploadToDelete,
+  fichesToDelete,
+  failedFichesToDelete
+) => {
+  const uploadDeletion = fs.unlink(uploadToDelete).catch((error) => {
+    throw new RoleBasedError({
+      0: `Erreur interne du serveur, au niveau du système de fichiers.\nErreur lors de la suppression de téléversement.\n${error.message}`,
+      1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+    });
+  });
 
-  const dirDeletions = directoriesToDelete.map((dirPath) =>
+  const ficheDeletions = fichesToDelete.map((dirPath) =>
     fs.rm(dirPath, { recursive: true }).catch((error) => {
       throw new RoleBasedError({
-        0: `Erreur interne du serveur.\nErreur lors de la suppression des répertoires.\n${error.message}`,
+        0: `Erreur interne du serveur, au niveau du système de fichiers.\nErreur lors de la suppression des fiches.\n${error.message}`,
         1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
       });
     })
   );
 
-  await Promise.all([...fileDeletions, ...dirDeletions]);
-}
+  const failedFicheDeletions = failedFichesToDelete.map((filePath) =>
+    fs.unlink(filePath).catch((error) => {
+      throw new RoleBasedError({
+        0: `Erreur interne du serveur, au niveau du système de fichiers.\nErreur lors de la suppression des fiches échouées.\n${error.message}`,
+        1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+      });
+    })
+  );
+
+  await Promise.all([
+    uploadDeletion,
+    ...ficheDeletions,
+    ...failedFicheDeletions,
+  ]);
+};
