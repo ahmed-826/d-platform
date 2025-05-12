@@ -246,8 +246,7 @@ const uploadByForm = async (formData) => {
   }
 
   const rank = await getUploadRank(date);
-
-  const fileName = zipFile.name;
+  const fileName = `Formulaire-${source}_${formattedDate}`;
   const name = `${format(date, "ddMMMMyyyy", {
     locale: fr,
   })}-${type}-${rank}`;
