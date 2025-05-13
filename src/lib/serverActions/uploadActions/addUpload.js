@@ -244,6 +244,16 @@ const uploadByForm = async (formData) => {
   if (dump) {
     dump = `files_${source}-${formattedDate}_dp`;
   }
+  const jsonData = {
+    index: dump,
+    summary,
+    object,
+    date_generate: date,
+    source: { name: source, date_collect: date },
+    files: documents.map((document) => ({
+      type: document.name.endsWith(".eml") ? "Email" : "File",
+    })),
+  };
 
   const rank = await getUploadRank(date);
   const fileName = `Formulaire-${source}_${formattedDate}`;

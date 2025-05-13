@@ -6,7 +6,7 @@ import prisma from "@/lib/db";
 import crypto from "crypto";
 import JSZip from "jszip";
 import { format } from "date-fns";
-import { fr, th } from "date-fns/locale";
+import { fr } from "date-fns/locale";
 import { RoleBasedError } from "@/lib/classes";
 
 const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
@@ -26,13 +26,8 @@ export const runUpload = async (uploadId) => {
   try {
     await updateUploadStatus(uploadId, "Processing");
 
-    const validationResult = await uploadValidation(uploadId);
-    if (!validationResult.success) {
-      await updateUploadStatus(uploadId, "Failed");
-      return validationResult;
-    }
+    const zipFileData = await uploadValidation(uploadId);
 
-    const zipFileData = validationResult.data;
     const precessResult = await processZipFile(zipFileData, uploadId);
     if (!precessResult.success) {
       await updateUploadStatus(uploadId, "Failed");
@@ -108,24 +103,32 @@ const completedUpload = async (uploadId) => {
 const uploadValidation = async (uploadId) => {
   try {
     let upload, absolutePath;
-    try {
-      upload = await prisma.upload.findUnique({ where: { id: uploadId } });
-    } catch {
-      throw new Error(
-        `Impossible de trouver le téléversement dans la base de données.`
-      );
-    }
-    if (!upload) {
-      throw new Error(
-        "Aucun téléversement correspondant n'a été trouvé dans la base de données. Veuillez recharger la page ou réessayer plus tard"
-      );
-    }
 
-    if (!upload.path) {
-      throw new Error(
-        "Le chemin d'accès au fichier téléversé est manquant. Cela peut indiquer que le traitement est toujours en cours ou que le fichier est incomplet. Veuillez patienter ou supprimer puis recréer le téléversement."
-      );
-    }
+    upload = await prisma.upload
+      .findUnique({ where: { id: uploadId } })
+      .then((upload) => {
+        if (!upload) {
+          throw new RoleBasedError({
+            0: `Aucune ressource n'a été trouvé dans la base de données. Veuillez rafraîchir la page.`,
+            1: `Aucune ressource n'a été trouvé. Veuillez rafraîchir la page.`,
+          });
+        }
+
+        if (!upload.path) {
+          throw new RoleBasedError({
+            0: `Ressource sans chemin d'accès.\nVeuillez Supprimer et ajouter une nouvelle ressource.`,
+            1: `Ressource sans chemin d'accès.\nVeuillez Supprimer et ajouter une nouvelle ressource, ou signaler la ressource.`,
+          });
+        }
+        return upload;
+      })
+      .catch((error) => {
+        if (error instanceof RoleBasedError) throw error;
+        throw new RoleBasedError({
+          0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la collecte du téléversement pour le valider.\n${error.message}`,
+          1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+        });
+      });
 
     try {
       absolutePath = path.join(FILE_STORAGE_PATH, upload.path);
