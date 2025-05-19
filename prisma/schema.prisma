@@ -47,7 +47,7 @@ enum FicheStatus {
 
 enum DocumentType {
   File
-  Email
+  Message
   Attachment
 }
 
@@ -60,21 +60,20 @@ model User {
   createdAt DateTime  @default(now())
   createdBy String?
   status    UserStatus @default(Active)
-
   uploads   Upload[]
 }
 
 model Upload {
-  id        String    @id @default(uuid()) @db.Uuid
+  id        String       @id @default(uuid()) @db.Uuid
   name      String    
-  date      DateTime  @default(now())
-  type      UploadType @default(API)
+  date      DateTime     @default(now())
+  type      UploadType   @default(API)
   status    UploadStatus @default(Pending)
   path      String
   fileName  String
-  hash      String   @unique
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hash      String       @unique
+  userId    String       @db.Uuid
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   fiches        Fiche[]
   failedFiches  FailedFiche[]
 }
@@ -83,18 +82,7 @@ model Source {
   id          String   @id @default(uuid()) @db.Uuid
   name        String   @unique
   description String?
-  dumps       Dump[]
-}
-
-model Dump {
-  id            String   @id @default(uuid()) @db.Uuid
-  name          String   @unique
-  sourceId      String   @db.Uuid
-  source        Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  dateCollect   DateTime?
-  description   String?
-  fiches        Fiche[]
-  failedFiches  FailedFiche[]
+  fiches      Fiche[]
 }
 
 model Ner {
@@ -106,39 +94,26 @@ model Ner {
 }
 
 model Fiche {
-  id               String       @id @default(uuid()) @db.Uuid
+  id               String        @id @default(uuid()) @db.Uuid
   ref              String
-
-  sourceId         String       @db.Uuid
-  source           Source       @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  date             DateTime     @default(now())
+  sourceId         String        @db.Uuid
+  source           Source        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  date             DateTime      @default(now())
   object           String
   summary          String
-
-  distributionDate DateTime?
-
+  createdBy        String?
+  dateDistribute   DateTime?
   path             String        @unique
   hash             String        @unique
-
   status           FicheStatus   @default(Suspended)
+  dump             String?
   uploadId         String        @db.Uuid
   upload           Upload        @relation(fields: [uploadId], references: [id], onDelete: Cascade)
-
   documents        Document[]
   ficheNers        FicheNer[]
-  observations     FicheRelation[] @relation("FicheObservations")
-  observedBy       FicheRelation[] @relation("FicheObservedBy")
-}
 
-model FicheRelation {
-  id            String   @id @default(uuid()) @db.Uuid
-  observerId    String   @db.Uuid
-  observedId    String   @db.Uuid
-
-  observer      Fiche    @relation("FicheObservedBy", fields: [observerId], references: [id], onDelete: Cascade)
-  observed      Fiche    @relation("FicheObservations", fields: [observedId], references: [id], onDelete: Cascade)
-
-  @@unique([observerId, observedId])
+  observations     Fiche[]  @relation("FicheObservations") // Fiches that THIS fiche observes
+  observedBy       Fiche[]  @relation("FicheObservations") // Fiches that observe THIS fiche
 }
 
 model FicheNer {
@@ -158,17 +133,25 @@ model Document {
   content             String?
   meta                Json?
   path                String       @unique
+  extension           String
+  sourcePath          String?      @unique
+  sourceExtension     String?
   reportingPath       String?
   hash                String       @unique
-  ficheId             String       @db.Uuid
-  fiche               Fiche        @relation(fields: [ficheId], references: [id], onDelete: Cascade)
+  ficheId             String?       @db.Uuid
+  fiche               Fiche?        @relation(fields: [ficheId], references: [id], onDelete: Cascade)
+
+  emailId          String?      @db.Uuid
+  email            Document?    @relation("EmailAttachments", fields: [emailId], references: [id], onDelete: Cascade)
+  attachments      Document[]   @relation("EmailAttachments")
 }
+
+
 
 model FailedFiche {
   id           String    @id @default(uuid()) @db.Uuid
   date         DateTime?
-  dumpId       String?   @db.Uuid
-  dump         Dump?     @relation(fields: [dumpId], references: [id], onDelete: Cascade)
+  dump         String?
   uploadId     String    @db.Uuid
   upload       Upload    @relation(fields: [uploadId], references: [id], onDelete: Cascade)
   path         String?

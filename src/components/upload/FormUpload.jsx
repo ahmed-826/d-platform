@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, FileText } from "lucide-react";
+import { X, FileText, MessageSquare, Paperclip } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 
 const FormUpload = () => {
@@ -26,24 +26,10 @@ const FormUpload = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!source || !object) return;
 
-    const generatedUploadName = `${
-      uploadName ? uploadName + "-" : ""
-    }Formulaire-${source}-${new Date().toLocaleDateString()}`;
-    const data = {
-      name: generatedUploadName,
-      source,
-      dump,
-      object,
-      summary,
-      sourceDocuments,
-      type: "form",
-    };
+    console.log("sourceDocuments: ", sourceDocuments);
 
-    // uploading logic (to backend)
-
-    const newUploadId = response.data.id;
+    //const newUploadId = response.data.id;
 
     returnToPreviousPage();
     addPage({
@@ -51,17 +37,56 @@ const FormUpload = () => {
       path: `/upload/consult/${newUploadId}`,
       type: "upload",
     });
-    router.push(`/upload/consult/${newUploadId}`);
+    // router.push(`/upload/consult/${newUploadId}`);
   };
 
   const handleSourceDocumentSelect = (selectedDocs) => {
     if (!selectedDocs) return;
 
-    setSourceDocuments((prev) => [...prev, ...Array.from(selectedDocs)]);
+    Array.from(selectedDocs).forEach((file) => {
+      const isEmailFile = file.name.toLowerCase().endsWith(".eml");
+      const defaultType = isEmailFile ? "Message" : "File";
+
+      setSourceDocuments((prev) => [
+        ...prev,
+        {
+          file,
+          type: defaultType,
+          associatedEmail: null,
+        },
+      ]);
+    });
   };
 
   const removeSourceDocument = (index) => {
     setSourceDocuments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const changeDocumentType = (index, type) => {
+    setSourceDocuments((prev) =>
+      prev.map((doc, i) => (i === index ? { ...doc, type } : doc))
+    );
+  };
+
+  const handleAssociatedEmailSelect = (index, emailSelected) => {
+    if (!emailSelected || emailSelected.length === 0) return;
+
+    setSourceDocuments((prev) =>
+      prev.map((doc, i) =>
+        i === index ? { ...doc, associatedEmail: emailSelected[0] } : doc
+      )
+    );
+  };
+
+  const getDocumentTypeIcon = (type) => {
+    switch (type) {
+      case "File":
+        return <FileText className="h-4 w-4 text-gray-500" />;
+      case "Message":
+        return <MessageSquare className="h-4 w-4 text-blue-500" />;
+      case "Attachment":
+        return <Paperclip className="h-4 w-4 text-green-500" />;
+    }
   };
 
   return (
@@ -159,26 +184,87 @@ const FormUpload = () => {
             </div>
 
             {sourceDocuments.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {sourceDocuments.map((doc, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between bg-white p-2 rounded border"
-                  >
-                    <div className="flex items-center">
-                      <FileText className="h-4 w-4 text-gray-500 mr-2" />
-                      <span className="text-sm truncate max-w-[400px]">
-                        {doc.name}
-                      </span>
+                  <div key={index} className="space-y-2 rounded-md border p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {getDocumentTypeIcon(doc.type)}
+                        <span className="text-sm truncate max-w-[400px]">
+                          {doc.file.name}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSourceDocument(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSourceDocument(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+
+                    <div className="flex items-center gap-2 mt-2">
+                      <Label
+                        htmlFor={`doc-type-${index}`}
+                        className="text-xs min-w-[80px]"
+                      >
+                        Type de document:
+                      </Label>
+                      <Select
+                        value={doc.type}
+                        onValueChange={(value) =>
+                          changeDocumentType(index, value)
+                        }
+                      >
+                        <SelectTrigger id={`doc-type-${index}`} className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="File">Fichier</SelectItem>
+                          <SelectItem value="Message">Message</SelectItem>
+                          <SelectItem value="Attachment">
+                            Pièce jointe
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {doc.type === "Attachment" && (
+                      <div className="mt-2">
+                        <Label
+                          htmlFor={`attachment-${index}`}
+                          className="text-xs"
+                        >
+                          Fichier d'email associé:
+                        </Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            type="file"
+                            id={`email-${index}`}
+                            className="hidden"
+                            onChange={(e) =>
+                              handleAssociatedEmailSelect(index, e.target.files)
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              document.getElementById(`email-${index}`)?.click()
+                            }
+                          >
+                            Sélectionner un email
+                          </Button>
+                          {doc.attachmentFile && (
+                            <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                              {doc.attachmentFile.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

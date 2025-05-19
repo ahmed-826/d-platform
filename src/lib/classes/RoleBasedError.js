@@ -15,12 +15,13 @@ export class RoleBasedError extends Error {
   }
 
   getMessage(role = "user") {
-    const { messages, fallbackMessage, highestDefinedLevel } = this;
+    const { messages, fallbackMessage } = this;
 
     const definedLevels = Object.keys(messages).map(Number);
     const roleLevel = ROLE_LEVELS[role];
+
     const chosenLevel = definedLevels.find((level) => level >= roleLevel);
 
-    return chosenLevel ? messages[chosenLevel] : fallbackMessage;
+    return chosenLevel !== undefined ? messages[chosenLevel] : fallbackMessage;
   }
 }

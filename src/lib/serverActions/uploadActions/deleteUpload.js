@@ -35,7 +35,6 @@ export const deleteUpload = async (id) => {
     });
   } catch (error) {
     const role = "superAdmin";
-    console.error(error); // Log the error for debugging
 
     return {
       success: false,
@@ -46,6 +45,7 @@ export const deleteUpload = async (id) => {
           : `Erreur interne du serveur.\n${error.message}`,
     };
   }
+  n;
 };
 
 const collectResourcesToDelete = async (prisma, uploadId) => {
@@ -125,8 +125,7 @@ const collectResourcesToDelete = async (prisma, uploadId) => {
           });
         }
         failedFichesToDelete.push(
-          FILE_STORAGE_PATH,
-          path.dirname(failedFiches.path)
+          path.join(FILE_STORAGE_PATH, failedFiche.path)
         );
       });
     })

@@ -26,65 +26,52 @@ export const runUpload = async (uploadId) => {
   try {
     await updateUploadStatus(uploadId, "Processing");
 
-    const zipFileData = await uploadValidation(uploadId);
+    const fileDate = await uploadValidation(uploadId);
 
-    const precessResult = await processZipFile(zipFileData, uploadId);
-    if (!precessResult.success) {
-      await updateUploadStatus(uploadId, "Failed");
-      return precessResult;
-    }
+    await processZipFile(fileDate, uploadId);
 
-    const upload = await completedUpload(uploadId);
-    return { success: true, data: upload, error: null };
+    const upload = await updateUploadStatus(uploadId, "Completed");
+
+    return {
+      success: true,
+      data: upload,
+      message: "Ressource traitée avec succès.",
+    };
   } catch (error) {
     const role = "superAdmin";
-    await updateUploadStatus(uploadId, "Failed").catch((error) => {
-      error = new RoleBasedError({
-        0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la mise à jour du statut du téléversement vers 'Failed' : ${error.message}`,
-        1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
-      });
-    });
+    const upload = await updateUploadStatus(uploadId, "Failed");
     return {
       success: false,
-      error: {
-        message:
-          error instanceof RoleBasedError
-            ? error.getMessage(role)
-            : `Erreur interne du serveur`,
-      },
+      data: upload,
+      message:
+        error instanceof RoleBasedError
+          ? error.getMessage(role)
+          : `Erreur interne du serveur.\n${error.message}`,
     };
   }
 };
 
 const updateUploadStatus = async (uploadId, status) => {
-  await prisma.upload
-    .update({ where: { id: uploadId }, data: { status } })
+  const upload = await prisma.upload
+    .update({
+      where: { id: uploadId },
+      data: { status },
+      include: {
+        user: true,
+        fiches: {
+          include: {
+            source: true,
+          },
+        },
+        failedFiches: true,
+      },
+    })
     .catch((error) => {
       throw new RoleBasedError({
-        0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la mise à jour du statut du téléversement : ${error.message}`,
+        0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la mise à jour du statut du téléversement vers '${status}'.\n${error.message}`,
         1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
       });
     });
-};
-
-const completedUpload = async (uploadId) => {
-  const upload = await prisma.upload.update({
-    where: { id: uploadId },
-    data: { status: "Completed" },
-    include: {
-      user: true,
-      fiches: {
-        include: {
-          dump: {
-            include: {
-              source: true,
-            },
-          },
-        },
-      },
-      failedFiches: true,
-    },
-  });
   const formattedUpload = {
     id: upload.id,
     name: upload.name,
@@ -109,11 +96,9 @@ const uploadValidation = async (uploadId) => {
       .then((upload) => {
         if (!upload) {
           throw new RoleBasedError({
-            0: `Aucune ressource n'a été trouvé dans la base de données. Veuillez rafraîchir la page.`,
-            1: `Aucune ressource n'a été trouvé. Veuillez rafraîchir la page.`,
+            1: `Ressource introuvable dans la base de données. Veuillez rafraîchir la page.`,
           });
         }
-
         if (!upload.path) {
           throw new RoleBasedError({
             0: `Ressource sans chemin d'accès.\nVeuillez Supprimer et ajouter une nouvelle ressource.`,
@@ -125,62 +110,75 @@ const uploadValidation = async (uploadId) => {
       .catch((error) => {
         if (error instanceof RoleBasedError) throw error;
         throw new RoleBasedError({
-          0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la collecte du téléversement pour le valider.\n${error.message}`,
+          0: `Erreur interne du serveur, au niveau de la base de données.\nErreur lors de la collecte du ressource pour le valider.\n${error.message}`,
           1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
         });
       });
 
-    try {
-      absolutePath = path.join(FILE_STORAGE_PATH, upload.path);
-      await fs.access(absolutePath, fs.constants.F_OK);
-    } catch {
-      throw new Error(
-        `Le fichier lié au téléversement est introuvable à l'emplacement suivant : ${absolutePath}. Vérifiez qu'il n'a pas été déplacé ou supprimé manuellement.`
-      );
-    }
+    absolutePath = path.join(FILE_STORAGE_PATH, upload.path);
+    await fs.access(absolutePath, fs.constants.F_OK).catch(() => {
+      throw new RoleBasedError({
+        0: `Ressource introuvable dans le système de fichiers dans ${absolutePath}. Vérifiez qu'il n'a pas été déplacé ou supprimé manuellement, ou utiliser le mode forcé.`,
+        0: `Ressource introuvable dans le système de fichiers.\nSignaler la ressource.`,
+      });
+    });
 
-    try {
-      const fileData = await fs.readFile(absolutePath);
-      return { success: true, data: fileData };
-    } catch (error) {
-      throw new Error(
-        `Impossible de lire le fichier lié au téléversement à l'emplacement : ${absolutePath}. Il peut être corrompu ou inaccessible. Supprimez ce téléversement et ajoutez-en un nouveau.`
-      );
-    }
+    const fileData = await fs.readFile(absolutePath).catch(() => {
+      throw new RoleBasedError({
+        0: `Erreur lors de la lecture du fichier lié à la ressource à l'emplacement : ${absolutePath}. Il peut être corrompu. Supprimez la ressource et ajoutez-en une nouvelle.`,
+        1: `Erreur lors de la lecture du fichier lié à la ressource.\nSupprimez la ressource et ajoutez-en une nouvelle.`,
+      });
+    });
+    return fileData;
   } catch (error) {
-    return { success: false, error: { message: error.message } };
+    if (error instanceof RoleBasedError) throw error;
+    throw new RoleBasedError({
+      0: `Erreur interne du serveur.\nErreur lors de la validation de la ressource.\n${error.message}`,
+      1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+    });
   }
 };
 
 const processZipFile = async (zipFileData, uploadId) => {
   try {
     let zipFile, fileNames, folders;
-    try {
-      zipFile = await JSZip.loadAsync(zipFileData);
-      fileNames = Object.keys(zipFile.files).filter(
-        (fileName) => !zipFile.files[fileName].dir
-      );
-      folders = [...new Set(Object.keys(zipFile.files).map(path.dirname))];
-    } catch {
-      throw new Error("Le fichier zip est corrompu");
-    }
+
+    zipFile = await JSZip.loadAsync(zipFileData)
+      .then((zip) => {
+        if (!zip) throw "L'objet zip est vide.";
+        return zip;
+      })
+      .catch((error) => {
+        throw new RoleBasedError({
+          0: `Erreur lors de la lecture du fichier lié à la ressource. Il peut être corrompu ou n'est pas un fichier zip valide.\n${error.message}`,
+          1: `Erreur lors de la lecture du fichier lié à la ressource. Il peut être corrompu ou n'est pas un fichier zip valide.`,
+        });
+      });
+    fileNames = Object.keys(zipFile.files).filter(
+      (fileName) => !zipFile.files[fileName].dir
+    );
+    folders = [...new Set(Object.keys(zipFile.files).map(path.dirname))];
 
     await Promise.all(
       folders.map(async (folder) => {
         await processFolder(zipFile, fileNames, folder, uploadId);
       })
     );
-
-    return { success: true };
   } catch (error) {
-    return { success: false, error: { message: error.message } };
+    if (error instanceof RoleBasedError) throw error;
+    throw new RoleBasedError({
+      0: `Erreur interne du serveur.\nErreur lors de la traitement du fichier lié à la ressource.\n${error.message}`,
+      1: `Erreur interne du serveur.\nContacter le Super administrateur.`,
+    });
   }
 };
 
 const processFolder = async (zipFile, fileNames, folder, uploadId) => {
   try {
     const fileNamesInFolder = fileNames.filter(
-      (fileName) => path.dirname(fileName) === folder
+      (fileName) =>
+        path.dirname(fileName) === folder ||
+        path.dirname(fileName) === path.join(folder, "Source")
     );
 
     // Process products
@@ -192,22 +190,13 @@ const processFolder = async (zipFile, fileNames, folder, uploadId) => {
     );
     await Promise.all(
       zipFileNames.map(async (zipFileName) => {
-        try {
-          const nestedZipFile = await zipFile
-            .file(zipFileName)
-            .async("arraybuffer");
-          const precessResult = await processZipFile(nestedZipFile, uploadId);
-          if (!precessResult.success) {
-            throw new Error(precessResult.error.message);
-          }
-        } catch (error) {
-          console.error(
-            `Erreur lors de la lecture du fichier zip imbriqué ${zipFileName}: ${error.message}`
-          );
-        }
+        const nestedZipFile = await zipFile
+          .file(zipFileName)
+          .async("arraybuffer");
+        await processZipFile(nestedZipFile, uploadId);
       })
-    );
-  } catch (error) {}
+    ).catch(() => {});
+  } catch {}
 };
 
 const processProduct = async (zipFile, fileNamesInFolder, uploadId) => {
@@ -219,8 +208,20 @@ const processProduct = async (zipFile, fileNamesInFolder, uploadId) => {
     const documentsNames = fileNamesInFolder.filter(
       (fileName) => isDocument(fileName) && fileName !== ficheName
     );
-    if (!jsonName || !ficheName || documentsNames.length === 0) {
-      throw new Error("Le produit est incomplet ou mal structuré");
+    const originalDocumentsNames = fileNamesInFolder.filter((fileName) =>
+      path.dirname(fileName).endsWith("/Source")
+    );
+
+    documentsNames.sort();
+    originalDocumentsNames.sort();
+
+    if (
+      !jsonName ||
+      !ficheName ||
+      documentsNames.length === 0 ||
+      originalDocumentsNames.length === 0
+    ) {
+      throw new Error("produit mal structuré");
     }
 
     const jsonData = await zipFile.file(jsonName).async("string");
@@ -230,6 +231,14 @@ const processProduct = async (zipFile, fileNamesInFolder, uploadId) => {
       .then((buf) => Buffer.from(buf));
     const documentsData = await Promise.all(
       documentsNames.map((fileName) =>
+        zipFile
+          .file(fileName)
+          .async("arraybuffer")
+          .then((buf) => Buffer.from(buf))
+      )
+    );
+    const originalDocumentsData = await Promise.all(
+      originalDocumentsNames.map((fileName) =>
         zipFile
           .file(fileName)
           .async("arraybuffer")
@@ -248,10 +257,12 @@ const processProduct = async (zipFile, fileNamesInFolder, uploadId) => {
         ficheName,
         documentsData,
         documentsNames,
-        message: jsonValidationResult.error.message,
+        originalDocumentsData,
+        originalDocumentsNames,
+        message: jsonValidationResult.message,
         uploadId,
       });
-      throw new Error(jsonValidationResult.error.message);
+      throw new Error(jsonValidationResult.message);
     }
 
     const validateJsonData = jsonValidationResult.data;
@@ -260,6 +271,7 @@ const processProduct = async (zipFile, fileNamesInFolder, uploadId) => {
       ficheName,
       ficheData,
       documentsData,
+      originalDocumentsData,
       uploadId
     );
     if (!transactionResult.success) {
@@ -269,10 +281,12 @@ const processProduct = async (zipFile, fileNamesInFolder, uploadId) => {
         ficheName,
         documentsData,
         documentsNames,
-        message: transactionResult.error.message,
+        originalDocumentsData,
+        originalDocumentsNames,
+        message: transactionResult.message,
         uploadId,
       });
-      throw new Error(transactionResult.error.message);
+      throw new Error(transactionResult.message);
     }
   } catch (error) {
     console.error(`Error processing product: ${error.message}`);
@@ -281,25 +295,20 @@ const processProduct = async (zipFile, fileNamesInFolder, uploadId) => {
 
 const jsonValidation = async (jsonData, documentsDataLength) => {
   try {
-    let dumpName,
-      sourceName,
-      dateCollect,
-      summary,
-      object,
-      dateGenerate,
-      documentsInfo;
+    let dump, sourceName, dateCollect, summary, object, date, documentsInfo;
     try {
       const jsonObject = JSON.parse(jsonData);
 
-      dumpName = jsonObject.index;
+      dump = jsonObject.index;
       sourceName = jsonObject.source.name;
       dateCollect = new Date(jsonObject.source.date_collect);
       summary = jsonObject.summary;
       object = jsonObject.object;
-      dateGenerate = new Date(jsonObject.date_generate);
+      date = new Date(jsonObject.date_generate);
       documentsInfo = jsonObject.files.map((file) => ({
         type: file.type,
-        fileName: file.original.filename,
+        fileName: file.name.filename,
+        originalFileName: file.original.filename,
         content: file.content,
         meta: file.meta,
         rpPath: file.path,
@@ -331,62 +340,30 @@ const jsonValidation = async (jsonData, documentsDataLength) => {
         `La source '${sourceName}' est introuvable dans la base de données`
       );
     }
-    if (!dateGenerate || isNaN(dateGenerate.getTime())) {
+    const sourceId = source.id;
+    if (!date || isNaN(date.getTime())) {
       throw new Error(
         "La date de génération est manquant ou invalide dans data.json"
       );
-    }
-    if (!dumpName) {
-      throw new Error("Le nom du dump est manquant dans data.json");
     }
     if (!dateCollect || isNaN(dateCollect.getTime())) {
       throw new Error(
         "La date de collecte du dump est manquant ou invalide dans data.json"
       );
     }
-    let dump;
-    try {
-      dump = await prisma.dump.findUnique({
-        where: { name: dumpName },
-      });
-    } catch {
-      throw new Error(
-        `Erreur lors de la recherche du dump '${dumpName}' dans la base de données : ${error.message}`
-      );
-    }
 
-    if (!dump) {
-      try {
-        dump = await prisma.dump.create({
-          data: {
-            name: dumpName,
-            dateCollect,
-            source: { connect: { id: source.id } },
-          },
-        });
-      } catch {
-        throw new Error(
-          `Erreur lors de la création du dump '${dumpName}' dans la base de données : ${error.message}`
-        );
-      }
-      if (!dump || !dump.id) {
-        throw new Error(
-          `Échec de la création du dump avec le nom '${dumpName}'`
-        );
-      }
-    }
-    const dumpId = dump.id;
     const data = {
-      dumpId,
+      dump,
+      sourceId,
       sourceName,
       summary,
       object,
-      dateGenerate,
+      date,
       documentsInfo,
     };
     return { success: true, data };
   } catch (error) {
-    return { success: false, error: { message: error.message } };
+    return { success: false, message: error.message };
   }
 };
 
@@ -395,15 +372,16 @@ const productTransaction = async (
   ficheName,
   ficheData,
   documentsData,
+  originalDocumentsData,
   uploadId
 ) => {
   try {
-    const { dumpId, sourceName, summary, object, dateGenerate, documentsInfo } =
+    const { dump, sourceId, sourceName, summary, object, date, documentsInfo } =
       validateJsonData;
     return await prisma.$transaction(async (prisma) => {
       let fichePath, hash;
       try {
-        fichePath = buildFichePath(sourceName, dateGenerate, ficheName);
+        fichePath = buildFichePath(sourceName, date, ficheName);
       } catch {
         throw new Error(`Erreur lors de la construction du chemin de la fiche`);
       }
@@ -421,11 +399,12 @@ const productTransaction = async (
       const fiche = await createFiche(prisma, {
         object,
         summary,
-        dateGenerate,
+        date,
         fichePath,
         hash,
         uploadId,
-        dumpId,
+        sourceId,
+        dump,
       });
 
       const documentPaths = await processDocuments(prisma, {
@@ -440,22 +419,23 @@ const productTransaction = async (
         ficheData,
         documentPaths,
         documentsData,
+        originalDocumentsData,
       });
 
-      return { success: true, error: null };
+      return { success: true, message: "Done" };
     });
   } catch (error) {
-    return { success: false, error: { message: error.message } };
+    return { success: false, message: error.message };
   }
 };
 
-const buildFichePath = (sourceName, dateGenerate, ficheName) => {
-  const formattedDateGenerate = format(dateGenerate, "yyyyMMdd");
+const buildFichePath = (sourceName, date, ficheName) => {
+  const formattedDate = format(date, "yyyyMMdd");
   const { base: ficheBaseName, name } = path.parse(ficheName);
   return path.join(
     PATH_CONFIG.FICHES,
     sourceName,
-    formattedDateGenerate,
+    formattedDate,
     name,
     ficheBaseName
   );
@@ -495,7 +475,7 @@ const checkForDuplicateFiles = async (prisma, hash, docType) => {
 
 const createFiche = async (prisma, data) => {
   try {
-    const { object, summary, dateGenerate, fichePath, hash, uploadId, dumpId } =
+    const { object, summary, date, fichePath, hash, uploadId, sourceId, dump } =
       data;
     const ref = "ABC-" + Math.floor(100 + Math.random() * 900);
     const fiche = await prisma.fiche.create({
@@ -503,11 +483,12 @@ const createFiche = async (prisma, data) => {
         ref,
         object,
         summary,
-        dateGenerate,
+        date,
         path: fichePath,
         hash,
+        dump: dump,
         upload: { connect: { id: uploadId } },
-        dump: { connect: { id: dumpId } },
+        source: { connect: { id: sourceId } },
       },
     });
 
@@ -528,6 +509,13 @@ const processDocuments = async (prisma, data) => {
   await Promise.all(
     documentsInfo.map(async (doc, index) => {
       try {
+        const docExt = path.extname(doc.fileName);
+        const originalExt = path.extname(doc.originalFileName);
+
+        // const docPath = path.join(basePath)
+
+        // insert documents and original documents
+
         const docBaseName = path.parse(doc.fileName).base;
         const docPath = path.join(basePath, PATH_CONFIG.SOURCE, docBaseName);
         documentPaths.push(docPath);
@@ -654,17 +642,14 @@ const insertFailedFiche = async ({
 
     await prisma.failedFiche.create({
       data: {
-        dateGenerate: new Date(),
+        date: new Date(),
         path: filePath,
         message: message,
         upload: { connect: { id: uploadId } },
       },
     });
-
-    return { success: true };
   } catch (error) {
     console.error("Error saving failed fiche", error.message);
-    return { success: false, error: error.message };
   }
 };
 

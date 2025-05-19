@@ -17,7 +17,7 @@ CREATE TYPE "NerCategory" AS ENUM ('Person', 'Organization', 'Location');
 CREATE TYPE "FicheStatus" AS ENUM ('Valid', 'Suspended', 'Canceled');
 
 -- CreateEnum
-CREATE TYPE "DocumentType" AS ENUM ('File', 'Email', 'Attachment');
+CREATE TYPE "DocumentType" AS ENUM ('File', 'Message', 'Attachment');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -39,9 +39,9 @@ CREATE TABLE "Upload" (
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "type" "UploadType" NOT NULL DEFAULT 'API',
     "status" "UploadStatus" NOT NULL DEFAULT 'Pending',
-    "path" TEXT,
+    "path" TEXT NOT NULL,
+    "fileName" TEXT NOT NULL,
     "hash" TEXT NOT NULL,
-    "fileName" TEXT,
     "userId" UUID NOT NULL,
 
     CONSTRAINT "Upload_pkey" PRIMARY KEY ("id")
@@ -54,17 +54,6 @@ CREATE TABLE "Source" (
     "description" TEXT,
 
     CONSTRAINT "Source_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Dump" (
-    "id" UUID NOT NULL,
-    "name" TEXT NOT NULL,
-    "dateCollect" TIMESTAMP(3),
-    "description" TEXT,
-    "sourceId" UUID NOT NULL,
-
-    CONSTRAINT "Dump_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -81,28 +70,19 @@ CREATE TABLE "Ner" (
 CREATE TABLE "Fiche" (
     "id" UUID NOT NULL,
     "ref" TEXT NOT NULL,
-    "object" TEXT,
-    "summary" TEXT,
-    "dateGenerate" TIMESTAMP(3) NOT NULL,
+    "sourceId" UUID NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "object" TEXT NOT NULL,
+    "summary" TEXT NOT NULL,
+    "createdBy" TEXT,
     "dateDistribute" TIMESTAMP(3),
-    "status" "FicheStatus" NOT NULL DEFAULT 'Suspended',
-    "name" TEXT NOT NULL,
-    "extension" TEXT NOT NULL,
-    "replacement" TEXT NOT NULL,
+    "path" TEXT NOT NULL,
     "hash" TEXT NOT NULL,
-    "dumpId" UUID NOT NULL,
+    "status" "FicheStatus" NOT NULL DEFAULT 'Suspended',
+    "dump" TEXT,
     "uploadId" UUID NOT NULL,
 
     CONSTRAINT "Fiche_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "FicheRelation" (
-    "id" UUID NOT NULL,
-    "observerId" UUID NOT NULL,
-    "observedId" UUID NOT NULL,
-
-    CONSTRAINT "FicheRelation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -118,14 +98,17 @@ CREATE TABLE "FicheNer" (
 -- CreateTable
 CREATE TABLE "Document" (
     "id" UUID NOT NULL,
-    "name" TEXT NOT NULL,
-    "type" "DocumentType",
+    "type" "DocumentType" NOT NULL,
     "content" TEXT,
     "meta" JSONB,
+    "path" TEXT NOT NULL,
     "extension" TEXT NOT NULL,
-    "replacement" TEXT NOT NULL,
+    "sourcePath" TEXT,
+    "sourceExtension" TEXT,
+    "reportingPath" TEXT,
     "hash" TEXT NOT NULL,
     "ficheId" UUID,
+    "emailId" UUID,
 
     CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
 );
@@ -133,13 +116,22 @@ CREATE TABLE "Document" (
 -- CreateTable
 CREATE TABLE "FailedFiche" (
     "id" UUID NOT NULL,
-    "dateGenerate" TIMESTAMP(3),
-    "dumpId" UUID,
+    "date" TIMESTAMP(3),
+    "dump" TEXT,
     "uploadId" UUID NOT NULL,
     "path" TEXT,
-    "message" TEXT NOT NULL,
+    "fileName" TEXT,
+    "message" TEXT,
 
     CONSTRAINT "FailedFiche_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "_FicheObservations" (
+    "A" UUID NOT NULL,
+    "B" UUID NOT NULL,
+
+    CONSTRAINT "_FicheObservations_AB_pkey" PRIMARY KEY ("A","B")
 );
 
 -- CreateIndex
@@ -152,37 +144,31 @@ CREATE UNIQUE INDEX "Upload_hash_key" ON "Upload"("hash");
 CREATE UNIQUE INDEX "Source_name_key" ON "Source"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Dump_name_key" ON "Dump"("name");
+CREATE UNIQUE INDEX "Fiche_path_key" ON "Fiche"("path");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Fiche_hash_key" ON "Fiche"("hash");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "FicheRelation_observerId_observedId_key" ON "FicheRelation"("observerId", "observedId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "FicheNer_ficheId_nerId_key" ON "FicheNer"("ficheId", "nerId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Document_path_key" ON "Document"("path");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Document_hash_key" ON "Document"("hash");
+
+-- CreateIndex
+CREATE INDEX "_FicheObservations_B_index" ON "_FicheObservations"("B");
 
 -- AddForeignKey
 ALTER TABLE "Upload" ADD CONSTRAINT "Upload_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Dump" ADD CONSTRAINT "Dump_sourceId_fkey" FOREIGN KEY ("sourceId") REFERENCES "Source"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Fiche" ADD CONSTRAINT "Fiche_dumpId_fkey" FOREIGN KEY ("dumpId") REFERENCES "Dump"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Fiche" ADD CONSTRAINT "Fiche_sourceId_fkey" FOREIGN KEY ("sourceId") REFERENCES "Source"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Fiche" ADD CONSTRAINT "Fiche_uploadId_fkey" FOREIGN KEY ("uploadId") REFERENCES "Upload"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "FicheRelation" ADD CONSTRAINT "FicheRelation_observerId_fkey" FOREIGN KEY ("observerId") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "FicheRelation" ADD CONSTRAINT "FicheRelation_observedId_fkey" FOREIGN KEY ("observedId") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "FicheNer" ADD CONSTRAINT "FicheNer_ficheId_fkey" FOREIGN KEY ("ficheId") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -194,7 +180,13 @@ ALTER TABLE "FicheNer" ADD CONSTRAINT "FicheNer_nerId_fkey" FOREIGN KEY ("nerId"
 ALTER TABLE "Document" ADD CONSTRAINT "Document_ficheId_fkey" FOREIGN KEY ("ficheId") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FailedFiche" ADD CONSTRAINT "FailedFiche_dumpId_fkey" FOREIGN KEY ("dumpId") REFERENCES "Dump"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Document" ADD CONSTRAINT "Document_emailId_fkey" FOREIGN KEY ("emailId") REFERENCES "Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "FailedFiche" ADD CONSTRAINT "FailedFiche_uploadId_fkey" FOREIGN KEY ("uploadId") REFERENCES "Upload"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_FicheObservations" ADD CONSTRAINT "_FicheObservations_A_fkey" FOREIGN KEY ("A") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_FicheObservations" ADD CONSTRAINT "_FicheObservations_B_fkey" FOREIGN KEY ("B") REFERENCES "Fiche"("id") ON DELETE CASCADE ON UPDATE CASCADE;

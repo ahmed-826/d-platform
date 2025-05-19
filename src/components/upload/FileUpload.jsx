@@ -3,7 +3,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { addUpload } from "@/lib/serverActions/uploadActions";
 
 const FileUpload = () => {
   const [file, setFile] = useState(null);
@@ -37,6 +36,11 @@ const FileUpload = () => {
       selectedFile?.name?.endsWith(".zip")
     ) {
       setFile(selectedFile);
+    } else {
+      toast({
+        title: "Fichier invalide",
+        variant: "destructive",
+      });
     }
   };
 
@@ -47,7 +51,10 @@ const FileUpload = () => {
     formData.append("type", "File");
     formData.append("file", file);
 
-    const { success, message } = await addUpload(formData);
+    const { success, message } = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    }).then((response) => response.json());
 
     toast({
       title: success ? "Fichier téléversé" : "Échec du téléversement",
@@ -56,7 +63,7 @@ const FileUpload = () => {
     });
 
     if (success) {
-      router.push("/upload?refresh=" + Date.now());
+      router.push("/upload");
     }
   };
 

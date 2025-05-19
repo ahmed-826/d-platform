@@ -1,5 +1,6 @@
 import ConsultUpload from "@/components/upload/ConsultUpload";
 import { getUploadByIdAndUserId } from "@/lib/services/uploadService";
+import prisma from "@/lib/db";
 import path from "path";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -8,9 +9,20 @@ const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
 
 const page = async ({ params }) => {
   const { uploadId } = params;
-  const userId = "a59cd394-5f14-42e0-b559-e6f9e0fee105";
+  const userId = "2eae0ec4-a489-4134-8931-202a38912f51";
 
-  const upload = await getUploadByIdAndUserId(uploadId, userId);
+  const upload = await prisma.upload.findUnique({
+    where: { id: uploadId, userId },
+    include: {
+      user: true,
+      fiches: {
+        include: {
+          source: true,
+        },
+      },
+      failedFiches: true,
+    },
+  });
 
   const formattedUpload = {
     id: upload.id,
