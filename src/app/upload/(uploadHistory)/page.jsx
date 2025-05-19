@@ -1,48 +1,4 @@
-import UploadHistory from "@/components/upload/UploadHistory";
-import path from "path";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import prisma from "@/lib/db";
-
-const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
-
-const page = async () => {
-  const userId = "2eae0ec4-a489-4134-8931-202a38912f51";
-
-  const uploads = await prisma.upload.findMany({
-    where: { userId },
-    include: {
-      user: true,
-      fiches: {
-        include: {
-          source: true,
-        },
-      },
-      failedFiches: true,
-    },
-    orderBy: {
-      date: "desc",
-    },
-  });
-  const formattedUploads = uploads.map((upload) => ({
-    id: upload.id,
-    name: upload.name,
-    status: upload.status,
-    date: format(upload.date, "dd MMMM yyyy 'à' HH:mm:ss", {
-      locale: fr,
-    }),
-    user: upload.user.username,
-    type: upload.type,
-    path: path.join(FILE_STORAGE_PATH, upload.path),
-    fileName: upload.fileName,
-    successfulFichesCount: upload.fiches.length,
-    totalFichesCount: upload.fiches.length + upload.failedFiches.length,
-  }));
-
-  return <UploadHistory uploadsData={formattedUploads} />;
-};
-
-("use client");
+"use client";
 
 import {
   Download,
@@ -70,29 +26,55 @@ import {
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
-} from "../ui/tooltip";
+} from "@/components/ui/tooltip";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { useApp } from "@/contexts/AppContext";
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { runUpload, deleteUpload } from "@/lib/serverActions/uploadActions";
 
-const UploadHistory = ({ uploadsData }) => {
-  const [uploads, setUploads] = useState(uploadsData);
+const UploadHistory = () => {
+  const [uploads, setUploads] = useState([]);
+  const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const { breadcrumbs, addToBreadcrumbs } = useApp();
+  const userId = "2eae0ec4-a489-4134-8931-202a38912f51";
+
   useEffect(() => {
-    if (breadcrumbs[breadcrumbs.length - 1].title !== "Téléversements") {
-      addToBreadcrumbs({
-        title: "Téléversements",
-        href: "/upload",
-      });
-    }
+    const loadUploads = async () => {
+      try {
+        const response = await fetch(`api/upload?userId=${userId}`);
+        const { success, data: uploads, message } = await response.json();
+
+        if (success) {
+          const formattedUploads = uploads.map((upload) => ({
+            id: upload.id,
+            name: upload.name,
+            status: upload.status,
+            date: format(upload.date, "dd MMMM yyyy 'à' HH:mm:ss", {
+              locale: fr,
+            }),
+            user: upload.user.username,
+            type: upload.type,
+            path: upload.path,
+            fileName: upload.fileName,
+            successfulFichesCount: upload.fiches.length,
+            totalFichesCount: upload.fiches.length + upload.failedFiches.length,
+          }));
+
+          setUploads(formattedUploads);
+        } else {
+          setError(message);
+        }
+      } catch (error) {
+        setError(error.message);
+      }
+    };
+
+    loadUploads();
   }, []);
-
-  if (!uploads) return;
-
+  console.log(error);
   const handleRun = async (id) => {
     toast({
       title: "Traitement en cours",

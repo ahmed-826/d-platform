@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
+import prisma from "@/lib/db";
 import { RoleBasedError } from "@/lib/classes";
+import { formatUploads } from "./getFunctions";
 import {
   formDataValidation,
   uploadByFileOrAPI,
   uploadByForm,
-  formatUploads,
-} from "./functions";
+} from "./postFunctions";
+
+const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
 
 export async function GET(request) {
   try {
@@ -16,10 +19,20 @@ export async function GET(request) {
 
     const where = {};
 
-    where.id = { in: ids };
-    where.userId = { in: userIds };
+    if (ids.length > 0) where.id = { in: ids };
+    if (userIds.length > 0) where.userId = { in: userIds };
 
-    const uploads = await prisma.upload.findMany({ where });
+    const uploads = await prisma.upload
+      .findMany({
+        where,
+        include: {
+          user: true,
+          fiches: { include: { source: true } },
+          failedFiches: true,
+        },
+        orderBy: { date: "desc" },
+      })
+      .then((uploads) => formatUploads(uploads));
 
     return NextResponse.json({ success: true, data: uploads }, { status: 200 });
   } catch (error) {

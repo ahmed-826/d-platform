@@ -9,25 +9,6 @@ import { calculateFileHash } from "@/lib/utils";
 const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
 const uploadDir = path.join("data", "upload");
 
-// GET functions
-const formatUploads = (uploads) => {
-  const formattedUploads = uploads.map((upload) => ({
-    id: upload.id,
-    name: upload.name,
-    status: upload.status,
-    date: format(upload.date, "dd MMMM yyyy 'à' HH:mm:ss", {
-      locale: fr,
-    }),
-    user: upload.user.username,
-    type: upload.type,
-    path: path.join(FILE_STORAGE_PATH, upload.path),
-    fileName: upload.fileName,
-    successfulFichesCount: upload.fiches.length,
-    totalFichesCount: upload.fiches.length + upload.failedFiches.length,
-  }));
-  return formattedUploads;
-};
-
 // POST Functions
 const formDataValidation = (formData) => {
   const type = formData.get("type");
@@ -277,4 +258,4 @@ const getUploadRank = async (date) => {
   }
 };
 
-export { formDataValidation, uploadByFileOrAPI, uploadByForm, formatUploads };
+export { formDataValidation, uploadByFileOrAPI, uploadByForm };
