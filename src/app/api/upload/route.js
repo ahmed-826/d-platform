@@ -1,26 +1,21 @@
 import { NextResponse } from "next/server";
+
 import prisma from "@/lib/db";
 import { RoleBasedError } from "@/lib/classes";
-import { formatUploads } from "./getFunctions";
+import { builtWhereFromSearchParams, formatUploads } from "./getFunctions";
 import {
   formDataValidation,
   uploadByFileOrAPI,
   uploadByForm,
 } from "./postFunctions";
-
-const FILE_STORAGE_PATH = process.env.FILE_STORAGE_PATH;
+import { HttpError } from "@/lib/classes/RoleBasedError";
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+    const { userId, role } = await getUSerIdAndRole();
 
-    const ids = searchParams.getAll("id");
-    const userIds = searchParams.getAll("userId");
-
-    const where = {};
-
-    if (ids.length > 0) where.id = { in: ids };
-    if (userIds.length > 0) where.userId = { in: userIds };
+    const where = builtWhereFromSearchParams(searchParams, role, userId);
 
     const uploads = await prisma.upload
       .findMany({
@@ -36,7 +31,16 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, data: uploads }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ success: false, data: null }, { status: 500 });
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, data: null, message: error.message },
+        { status: error.status }
+      );
+    }
+    return NextResponse.json(
+      { success: false, data: null, message: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
 

@@ -7,21 +7,40 @@ const ROLE_LEVELS = {
 };
 
 export class RoleBasedError extends Error {
-  constructor(messages = {}, fallbackMessage = "Erreur s'est produite.") {
+  constructor(
+    message = {},
+    status = 200,
+    fallbackMessage = "Erreur s'est produite."
+  ) {
     super();
     this.name = "RoleBasedError";
-    this.messages = messages;
+    this.message = message;
+    this.status = status;
     this.fallbackMessage = fallbackMessage;
   }
 
   getMessage(role = "user") {
-    const { messages, fallbackMessage } = this;
+    const { message, fallbackMessage } = this;
 
-    const definedLevels = Object.keys(messages).map(Number);
+    if (typeof message === "string") return message;
+
+    const definedLevels = Object.keys(message).map(Number);
     const roleLevel = ROLE_LEVELS[role];
 
     const chosenLevel = definedLevels.find((level) => level >= roleLevel);
 
-    return chosenLevel !== undefined ? messages[chosenLevel] : fallbackMessage;
+    return chosenLevel !== undefined ? message[chosenLevel] : fallbackMessage;
+  }
+
+  getStatus() {
+    return this.status;
+  }
+}
+
+export class HttpError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+    this.name = this.constructor.name;
   }
 }

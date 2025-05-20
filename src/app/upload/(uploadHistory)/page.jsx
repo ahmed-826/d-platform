@@ -39,12 +39,10 @@ const UploadHistory = () => {
   const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const userId = "2eae0ec4-a489-4134-8931-202a38912f51";
-
   useEffect(() => {
     const loadUploads = async () => {
       try {
-        const response = await fetch(`api/upload?userId=${userId}`);
+        const response = await fetch(`api/upload`);
         const { success, data: uploads, message } = await response.json();
 
         if (success) {
@@ -74,7 +72,6 @@ const UploadHistory = () => {
 
     loadUploads();
   }, []);
-  console.log(error);
   const handleRun = async (id) => {
     toast({
       title: "Traitement en cours",

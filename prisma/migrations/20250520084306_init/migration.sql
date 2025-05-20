@@ -1,20 +1,20 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('SuperAdmin', 'Admin', 'User');
+CREATE TYPE "UserRole" AS ENUM ('superAdmin', 'admin', 'user');
 
 -- CreateEnum
-CREATE TYPE "UserStatus" AS ENUM ('Active', 'Banned', 'Deleted');
+CREATE TYPE "UserStatus" AS ENUM ('active', 'banned', 'deleted');
 
 -- CreateEnum
-CREATE TYPE "UploadType" AS ENUM ('Form', 'File', 'API');
+CREATE TYPE "UploadType" AS ENUM ('form', 'file', 'api');
 
 -- CreateEnum
-CREATE TYPE "UploadStatus" AS ENUM ('Pending', 'Processing', 'Completed', 'Failed');
+CREATE TYPE "UploadStatus" AS ENUM ('pending', 'processing', 'completed', 'failed');
 
 -- CreateEnum
-CREATE TYPE "NerCategory" AS ENUM ('Person', 'Organization', 'Location');
+CREATE TYPE "NerCategory" AS ENUM ('person', 'organization', 'location');
 
 -- CreateEnum
-CREATE TYPE "FicheStatus" AS ENUM ('Valid', 'Suspended', 'Canceled');
+CREATE TYPE "FicheStatus" AS ENUM ('valid', 'suspended', 'canceled');
 
 -- CreateEnum
 CREATE TYPE "DocumentType" AS ENUM ('File', 'Message', 'Attachment');
@@ -23,11 +23,11 @@ CREATE TYPE "DocumentType" AS ENUM ('File', 'Message', 'Attachment');
 CREATE TABLE "User" (
     "id" UUID NOT NULL,
     "username" TEXT NOT NULL,
-    "role" "UserRole" NOT NULL DEFAULT 'User',
+    "role" "UserRole" NOT NULL DEFAULT 'user',
     "password" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdBy" TEXT,
-    "status" "UserStatus" NOT NULL DEFAULT 'Active',
+    "status" "UserStatus" NOT NULL DEFAULT 'active',
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -37,8 +37,8 @@ CREATE TABLE "Upload" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "type" "UploadType" NOT NULL DEFAULT 'API',
-    "status" "UploadStatus" NOT NULL DEFAULT 'Pending',
+    "type" "UploadType" NOT NULL DEFAULT 'api',
+    "status" "UploadStatus" NOT NULL DEFAULT 'pending',
     "path" TEXT NOT NULL,
     "fileName" TEXT NOT NULL,
     "hash" TEXT NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE "Fiche" (
     "dateDistribute" TIMESTAMP(3),
     "path" TEXT NOT NULL,
     "hash" TEXT NOT NULL,
-    "status" "FicheStatus" NOT NULL DEFAULT 'Suspended',
+    "status" "FicheStatus" NOT NULL DEFAULT 'suspended',
     "dump" TEXT,
     "uploadId" UUID NOT NULL,
 
@@ -102,9 +102,7 @@ CREATE TABLE "Document" (
     "content" TEXT,
     "meta" JSONB,
     "path" TEXT NOT NULL,
-    "extension" TEXT NOT NULL,
     "sourcePath" TEXT,
-    "sourceExtension" TEXT,
     "reportingPath" TEXT,
     "hash" TEXT NOT NULL,
     "ficheId" UUID,
@@ -154,6 +152,9 @@ CREATE UNIQUE INDEX "FicheNer_ficheId_nerId_key" ON "FicheNer"("ficheId", "nerId
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Document_path_key" ON "Document"("path");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Document_sourcePath_key" ON "Document"("sourcePath");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Document_hash_key" ON "Document"("hash");

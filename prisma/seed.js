@@ -3,20 +3,27 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Create Users
+  const superAdminUser = await prisma.user.create({
+    data: {
+      username: "superAdmin",
+      role: "superAdmin",
+      password: "superAdmin123",
+    },
+  });
+
   const adminUser = await prisma.user.create({
     data: {
       username: "admin",
-      role: "Admin",
+      role: "admin",
       password: "admin123",
     },
   });
 
-  const johnDoeUser = await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
-      username: "john_doe",
-      role: "User",
-      password: "john123",
-      createdBy: adminUser.id,
+      username: "user",
+      role: "user",
+      password: "user123",
     },
   });
 
